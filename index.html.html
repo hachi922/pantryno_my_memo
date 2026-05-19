@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="キッチン管理">
+<title>Pantryno</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#E8A0A0">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#f0f0f0;font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Hiragino Kaku Gothic ProN',Meiryo,sans-serif}
+body{display:flex;justify-content:center;align-items:flex-start;min-height:100vh}
+.kapp{display:flex;flex-direction:column;height:100svh;width:100%;max-width:480px;margin:0 auto;position:relative;background:var(--bg-page);overflow:hidden}
+@media(min-width:500px){body{align-items:center;padding:16px 0}.kapp{height:min(820px,96svh);border:0.5px solid #ccc;border-radius:20px;box-shadow:0 8px 40px rgba(0,0,0,.12)}}
+.topbar{background:var(--ac-mid);padding:max(env(safe-area-inset-top),10px) 12px 8px;display:flex;align-items:center;gap:6px;flex-shrink:0}
+.topbar-title{font-size:15px;font-weight:700;flex:1;color:var(--topbar-tx)}
+.logo{font-family:'Pacifico',cursive;font-size:20px;font-weight:400;color:var(--logo-tx,#fff);letter-spacing:0.5px;flex:1;line-height:1}
+.screen-label{display:inline-flex;align-items:center;height:26px;padding:0 11px;background:var(--ac-mid);color:#fff;font-size:11px;font-weight:700;letter-spacing:.5px;border-radius:13px;white-space:nowrap;flex-shrink:0}
+.ib{width:32px;height:32px;border:none;border-radius:8px;background:rgba(0,0,0,.1);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--topbar-tx);font-size:16px;flex-shrink:0;-webkit-tap-highlight-color:transparent}
+.ib:hover{background:rgba(0,0,0,.18)}
+.ib.primary{background:rgba(0,0,0,.15)}
+.screen{display:none;flex:1;flex-direction:column;overflow:hidden;background:var(--bg-page)}
+.screen.active{display:flex}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:8px 12px}
+.bottomnav{display:flex;background:#fff;border-top:0.5px solid #ddd;flex-shrink:0;padding-bottom:env(safe-area-inset-bottom,0)}
+.bnav{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px 10px;border:none;background:none;cursor:pointer;color:#a9a9a9;font-size:10px;-webkit-tap-highlight-color:transparent}
+.bnav i{font-size:22px}
+.bnav.active{color:#696969}
+.bdg{position:relative;display:inline-block}
+.bdg-n{position:absolute;top:-4px;right:-8px;background:#e05;color:#fff;font-size:9px;font-weight:500;padding:0 3px;border-radius:8px;min-width:14px;text-align:center;line-height:14px;display:none}
+.sbar-inv{display:flex;gap:6px;padding:6px 12px;background:#fff;border-bottom:0.5px solid #e0e0e0;flex-shrink:0}
+.sbar-inv input{flex:1;min-width:0;height:32px;font-size:13px;padding:0 12px;border-radius:16px;border:0.5px solid #ddd;background:#fff;color:#333;-webkit-appearance:none}
+.sbar-inv input::placeholder{color:#c0c0c0}
+.sbar-inv select{flex:1;min-width:0;height:32px;font-size:12px;padding:0 6px;border:0.5px solid #ddd;border-radius:8px;background:#fff;color:#333}
+.sbar{display:flex;gap:6px;padding:6px 12px;background:#fff;border-bottom:0.5px solid #e0e0e0;flex-shrink:0}
+.sbar input{flex:1;height:32px;font-size:13px;padding:0 12px;border-radius:16px;border:0.5px solid #ddd;background:#fff;color:#333;-webkit-appearance:none}
+.cat-lbl{font-size:11px;font-weight:500;color:#888;letter-spacing:.03em;padding:8px 0 4px;display:flex;align-items:center;gap:5px}
+.inv-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:4px}
+.icard{background:#fff;border:0.5px solid #e0e0e0;border-radius:10px;padding:9px 10px;display:flex;flex-direction:column;gap:4px}
+.icard-top{display:flex;align-items:baseline;justify-content:space-between;gap:3px}
+.icard-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;color:#333}
+.icard-exp{font-size:10px;color:#aaa;white-space:nowrap;flex-shrink:0}
+.icard-bottom{display:flex;align-items:center;justify-content:space-between}
+.icard-qty{font-size:12px;color:#888}
+.icard-acts{display:flex;gap:4px;opacity:1}
+
+.icb{width:24px;height:24px;border:none;background:none;cursor:pointer;color:#ccc;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:14px;-webkit-tap-highlight-color:transparent}
+.icb:active{background:#f0f0f0;color:#555}
+.icb.del:active{color:#e05}
+.cart-icb{width:26px;height:26px;border:0.5px solid #ddd;background:#f5f5f5;cursor:pointer;color:#aaa;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;-webkit-tap-highlight-color:transparent}
+.cart-icb.in{background:var(--ac-light);color:var(--ac-mid);border-color:var(--ac-mid)}
+.folder{background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;margin-bottom:8px;overflow:hidden}
+.folder-header{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;background:var(--ac-light);-webkit-tap-highlight-color:transparent}
+.folder-icon{font-size:18px;color:var(--ac-mid);flex-shrink:0}
+.folder-name{font-size:14px;font-weight:500;color:#333;flex:1}
+.folder-meta{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.folder-count{font-size:12px;color:#888}
+.miss-badge{font-size:11px;padding:2px 7px;border-radius:8px;background:#fff3cd;color:#856404;border:0.5px solid #ffc107;white-space:nowrap}
+.miss-badge.ok{background:#d4edda;color:#155724;border-color:#28a745}
+.folder-chevron{font-size:15px;color:#aaa;transition:transform .2s}
+.folder-chevron.open{transform:rotate(90deg)}
+.folder-acts{display:flex;gap:2px;flex-shrink:0}
+.folder-acts .icb{color:var(--folder-act-tx,rgba(255,255,255,.8))}
+.folder-acts .icb:active{background:rgba(255,255,255,.2);color:var(--folder-act-tx,#fff)}
+.folder-body{border-top:0.5px solid #e8e8e8}
+.fhc{background:color-mix(in srgb,var(--ac-mid) 65%,white)!important}
+.fhc .folder-name,.fhc .inv-folder-name,.fhc .fav-section-title,.fhc .menu-plan-name,.fhc .menu-plan-sv,.fhc .folder-count,.fhc .fav-count{color:var(--fhc-tx,#fff)!important;font-weight:600!important}
+.fhc .folder-icon,.fhc .folder-chevron,.fhc .inv-folder-chevron,.fhc .menu-plan-chevron{color:var(--fhc-tx,#fff)!important}
+.fhc .miss-badge,.fhc .miss-badge.ok{background:rgba(255,255,255,.2)!important;color:var(--fhc-tx,#fff)!important;border-color:rgba(255,255,255,.5)!important;font-weight:600!important}
+.inv-folder{background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;margin-bottom:8px;overflow:hidden}
+.inv-folder-header{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;background:var(--ac-light);-webkit-tap-highlight-color:transparent}
+.inv-folder-name{font-size:13px;font-weight:500;color:#333;flex:1}
+.inv-folder-chevron{font-size:15px;color:#aaa;transition:transform .2s}
+.inv-folder-chevron.open{transform:rotate(90deg)}
+.star-btn{width:28px;height:28px;border:none;background:none;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:#ccc;flex-shrink:0;-webkit-tap-highlight-color:transparent;padding:0}
+.star-btn.on{color:#f5a623}
+.fav-section{background:#fffbf0;border:0.5px solid #f5d78e;border-radius:12px;margin-bottom:8px;overflow:hidden}
+.fav-section-header{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fff8e1;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.fav-section-title{font-size:13px;font-weight:500;color:#8a6000;flex:1}
+.fav-count{font-size:12px;color:#b8860b}
+.rec-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:0.5px solid #f0f0f0}
+.rec-row:last-child{border-bottom:none}
+.rec-check{width:22px;height:22px;border:1.5px solid #ddd;border-radius:6px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.rec-check.checked{background:var(--check-bg,var(--ac-mid));border-color:var(--check-bg,var(--ac-mid));color:var(--check-tx,#fff)}
+.rec-check i{font-size:14px}
+.rec-row-body{flex:1;cursor:pointer;min-width:0;-webkit-tap-highlight-color:transparent}
+.rec-row-name{font-size:13px;font-weight:500;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rec-row-sv{font-size:11px;color:#aaa;margin-top:2px}
+.rec-row-acts{display:flex;gap:2px;flex-shrink:0}
+.rec-sel-bar{background:#fff;border-bottom:0.5px solid #e0e0e0;padding:8px 12px;flex-shrink:0}
+.rec-sel-summary{display:flex;align-items:center;gap:8px;font-size:13px}
+.rec-sel-summary span{flex:1;color:#666}
+.add-all-btn{display:flex;align-items:center;gap:6px;padding:8px 13px;background:transparent;color:var(--ac-mid);border:1.5px solid var(--ac-mid);border-radius:9px;cursor:pointer;font-size:13px;font-weight:500;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.add-all-btn:active{opacity:.85}
+.add-all-btn:disabled{background:#fff;color:#ccc;border-color:#ddd;cursor:default}
+.dv{display:none;flex:1;flex-direction:column;overflow:hidden}
+.dv.active{display:flex}
+.lv{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.sbox{background:#fff;border:0.5px solid #e8e8e8;border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.sbox h5{font-size:10px;font-weight:600;color:#999;letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase}
+.ir{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:.5px solid #f0f0f0;color:#333}
+.ir:last-child{border-bottom:none}
+.ir.miss{color:#c0392b}
+.ing-group{margin-top:5px}
+.ing-group-label{font-size:11px;font-weight:500;color:var(--ac-dark);background:var(--ac-light);padding:2px 9px;border-radius:6px;display:inline-block;margin-bottom:4px}
+.ing-group-rows{padding-left:12px;border-left:2px solid var(--ac-light)}
+.rec-url-link{font-size:12px;color:var(--ac-mid);display:flex;align-items:center;gap:5px;margin-top:5px;text-decoration:none;word-break:break-all}
+.rec-url-link:hover{text-decoration:underline}
+.si{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:.5px solid #e8e8e8;border-radius:10px;margin-bottom:6px;font-size:13px;color:#333}
+.si input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac-mid);cursor:pointer;flex-shrink:0}
+.si.chk{opacity:.45}
+.si.chk .si-name{text-decoration:line-through}
+.si-qty{font-size:12px;color:#888}
+.shop-topbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fff;border-bottom:0.5px solid #e0e0e0;flex-shrink:0}
+.shop-add-btn{display:flex;align-items:center;gap:6px;height:34px;padding:0 14px;background:var(--ac-mid);color:#fff;border:none;border-radius:9px;cursor:pointer;font-size:13px;font-weight:500;white-space:nowrap;flex-shrink:0;-webkit-tap-highlight-color:transparent}
+.shop-add-btn:active{opacity:.85}
+.shop-count{font-size:13px;color:#888;flex:1}
+.shr{padding:8px 14px;border-top:0.5px solid #e0e0e0;background:#fff;flex-shrink:0;display:flex;align-items:center;gap:5px;justify-content:flex-end}
+.shr-lbl{font-size:12px;color:#aaa;margin-right:5px}
+.shr-btn{width:34px;height:34px;border:0.5px solid #ddd;border-radius:9px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#999;font-size:18px;-webkit-tap-highlight-color:transparent}
+.shr-btn:active{background:#f0f0f0}
+.mw{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:flex-end;z-index:200}
+@media(min-width:500px){.mw{position:absolute;border-radius:20px}}
+.sheet{background:#fff;border-radius:20px 20px 0 0;width:100%;padding:18px 16px;padding-bottom:max(env(safe-area-inset-bottom),18px);max-height:90svh;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:10px}
+.sheet h3{font-size:16px;font-weight:500;color:#333}
+.sheet label{font-size:12px;color:#888;display:block;margin-bottom:3px}
+.sheet input,.sheet select,.sheet textarea{width:100%;font-size:14px;padding:8px 11px;border:.5px solid #ccc;border-radius:9px;background:#fafafa;color:#333;-webkit-appearance:none}
+.sheet textarea{resize:vertical;min-height:60px}
+.sf{display:flex;gap:8px;justify-content:flex-end;padding-top:4px}
+.btn{height:36px;padding:0 14px;border:.5px solid #ccc;border-radius:9px;background:#fff;color:#333;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:5px;-webkit-tap-highlight-color:transparent}
+.btn:active{background:#f0f0f0}
+.btn.p{background:var(--ac-mid);color:#fff;border-color:var(--ac-dark)}
+.btn.p:active{background:var(--ac-dark)}
+.btn.d{color:#c0392b;border-color:#f5c6cb;background:#fff5f5}
+.btn.s{height:28px;padding:0 9px;font-size:12px}
+.ing-group-edit{background:#fafafa;border:0.5px solid #e0e0e0;border-radius:9px;padding:8px 10px;margin-bottom:5px}
+.ing-group-edit-header{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.ing-group-edit-header input{flex:1;height:30px;font-size:12px;padding:0 8px;border:.5px solid #ccc;border-radius:7px;background:#fff;color:#333}
+.ier{display:flex;gap:5px;align-items:center;margin-bottom:4px}
+.ier input{height:30px;font-size:12px;padding:0 7px;border:.5px solid #ccc;border-radius:7px;background:#fff;color:#333;flex:1}
+.ser{display:flex;gap:5px;align-items:flex-start;margin-bottom:4px}
+.ser textarea{font-size:12px;padding:5px 8px;border:.5px solid #ccc;border-radius:7px;background:#fafafa;color:#333;flex:1;min-height:44px;resize:vertical}
+.snum{width:20px;height:20px;border-radius:50%;background:var(--ac-mid);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;margin-top:4px}
+.em{text-align:center;color:#bbb;padding:32px 16px;font-size:13px}
+.em i{font-size:36px;display:block;margin-bottom:10px}
+.cmr{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:.5px solid #f0f0f0;color:#333;font-size:13px}
+.cmr:last-child{border-bottom:none}
+.notice{background:#e8f4fd;color:#1a5276;border:.5px solid #aed6f1;border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.6}
+.cfg-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:.5px solid #f0f0f0;font-size:13px;color:#333}
+.cfg-row:last-child{border-bottom:none}
+.cfg-lbl{font-size:13px;color:#333}
+.cfg-sub{font-size:11px;color:#aaa;margin-top:2px}
+.sw-grid{display:flex;flex-wrap:wrap;gap:6px}
+.swatch{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;flex-shrink:0;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+.swatch.on{border-color:#555;transform:scale(1.2)}
+.seg{display:flex;gap:5px}
+.seg-btn{height:30px;padding:0 12px;font-size:12px;border:.5px solid #ccc;border-radius:7px;background:#f5f5f5;color:#888;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.seg-btn.on{background:var(--ac-mid);color:#fff;border-color:var(--ac-dark)}
+.fs-row{display:flex;align-items:center;gap:8px;width:100%;margin-top:6px}
+.fs-row input[type=range]{flex:1;accent-color:var(--ac-mid)}
+.menu-plan-card{background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;margin-bottom:8px;overflow:hidden}
+.menu-plan-header{background:var(--ac-light);padding:9px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;-webkit-tap-highlight-color:transparent}
+.menu-plan-header:active{filter:brightness(.97)}
+.menu-plan-title{flex:1}
+.menu-plan-name{font-size:14px;font-weight:500;color:#333;display:block;margin-bottom:2px}
+.menu-plan-sv{font-size:12px;color:#888}
+.menu-plan-body{padding:10px 12px}
+.menu-plan-chevron{font-size:15px;color:#aaa;transition:transform .2s;flex-shrink:0}
+.menu-plan-chevron.open{transform:rotate(90deg)}
+.steps-compact{font-size:12px;color:#555;line-height:1.7}
+.steps-compact .step{display:flex;gap:6px;margin-bottom:3px}
+.step-n{width:18px;height:18px;border-radius:50%;background:var(--ac-mid);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;margin-top:2px}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--ac-dark);color:#fff;padding:9px 18px;border-radius:22px;font-size:13px;z-index:300;white-space:nowrap;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+@media(min-width:500px){.toast{position:absolute}}
+</style>
+</head>
+<body>
+<div class="kapp" id="kapp">
+<div class="topbar">
+  <div class="logo" id="topbar-logo">Pantryno</div>
+  <span class="topbar-title" id="topbar-title" style="display:none">在庫管理</span>
+  <button class="ib" id="cat-btn" onclick="openCatManage()"><i class="bi bi-folder"></i></button>
+  <button class="ib primary" id="add-btn" onclick="handleAdd()"><i class="bi bi-plus-lg"></i></button>
+  <button class="ib" onclick="openCfg()"><i class="bi bi-gear"></i></button>
+</div>
+
+<div class="screen active" id="screen-inv">
+  <div class="sbar-inv">
+    <span class="screen-label">在庫</span>
+    <input type="text" id="inv-search" placeholder="食材／食品を検索" oninput="renderInv()">
+    <select id="inv-cf" onchange="renderInv()"><option value="">すべてのカテゴリ</option></select>
+  </div>
+  <div class="scroll" id="inv-c"></div>
+</div>
+
+<div class="screen" id="screen-rec">
+  <div class="lv" id="rec-lv">
+    <div class="sbar"><span class="screen-label">レシピ</span><input type="text" id="rec-search" placeholder="レシピを検索..." oninput="renderRec()"></div>
+    <div class="rec-sel-bar"><div class="rec-sel-summary"><span id="rec-sel-txt">レシピを選んで不足食材をまとめて追加</span><button class="add-all-btn" id="add-all-btn" disabled onclick="addAllMissing()"><i class="bi bi-cart-plus"></i><span id="add-all-label">追加</span></button></div></div>
+    <div class="scroll" id="rec-c"></div>
+  </div>
+  <div class="dv" id="rec-dv">
+    <div class="sbar" style="gap:8px"><button class="btn" style="height:30px" onclick="closeDetail()"><i class="bi bi-arrow-left"></i>戻る</button><div style="flex:1"></div><button class="btn s" id="det-edit"><i class="bi bi-pencil"></i>編集</button><button class="btn s d" id="det-del"><i class="bi bi-trash"></i></button></div>
+    <div class="scroll" id="rec-dc"></div>
+  </div>
+</div>
+
+<div class="screen" id="screen-menu">
+  <div style="background:var(--ac-light);border-bottom:0.5px solid #e0e0e0;padding:8px 12px;flex-shrink:0;display:flex;align-items:center;gap:8px">
+    <span class="screen-label">献立</span>
+    <span style="font-size:12px;color:#666;flex:1" id="menu-sel-lbl">レシピを選択してください</span>
+  </div>
+  <div class="scroll" id="menu-c"></div>
+</div>
+
+<div class="screen" id="screen-shop">
+  <div class="shop-topbar"><span class="screen-label">買い物</span><span class="shop-count" id="shop-count">リストは空です</span><button class="shop-add-btn" onclick="addManual()"><i class="bi bi-plus-lg"></i>食材を追加</button></div>
+  <div class="scroll" id="shop-c"></div>
+  <div class="shr"><button class="shr-btn" onclick="shareToLine()" title="LINE"><i class="bi bi-chat-dots"></i></button><button class="shr-btn" onclick="copyList()" title="コピー"><i class="bi bi-clipboard"></i></button></div>
+</div>
+
+<nav class="bottomnav">
+  <button class="bnav active" id="bnav-inv" onclick="switchTab('inv')"><i class="bi bi-box-seam"></i><span>在庫</span></button>
+  <button class="bnav" id="bnav-rec" onclick="switchTab('rec')"><i class="bi bi-journal-richtext"></i><span>レシピ</span></button>
+  <button class="bnav" id="bnav-menu" onclick="switchTab('menu')"><i class="bi bi-egg-fried"></i><span>献立</span></button>
+  <button class="bnav" id="bnav-shop" onclick="switchTab('shop')"><div class="bdg"><i class="bi bi-cart3"></i><span class="bdg-n" id="shop-bdg">0</span></div><span>買い物</span></button>
+</nav>
+
+<div class="mw" id="mw" style="display:none" onclick="closeMW(event)"><div class="sheet" id="sheet" onclick="e=>e.stopPropagation()"></div></div>
+<input type="file" id="import-file" accept=".json" style="display:none" onchange="doImport(event)">
+</div>
+
+<script>
+const PALETTES=[
+  {name:'桜ピンク',mid:'#E8A0A0',dark:'#B05050',light:'#FDE8E8'},
+  {name:'ペールローズ',mid:'#D4849A',dark:'#8C3D54',light:'#FAE8EE'},
+  {name:'コーラル',mid:'#E8997A',dark:'#A0502A',light:'#FDEEE8'},
+  {name:'ピーチ',mid:'#E8B87A',dark:'#A06830',light:'#FDF3E3'},
+  {name:'バター',mid:'#D4C47A',dark:'#886C20',light:'#FBF8E3'},
+  {name:'レモン',mid:'#C8D47A',dark:'#6C8020',light:'#F5F8E3'},
+  {name:'ミント',mid:'#8AC8A0',dark:'#2A7850',light:'#E8F8EE'},
+  {name:'セージ',mid:'#7AB8A0',dark:'#1A6855',light:'#E3F5EE'},
+  {name:'スカイブルー',mid:'#7AB0D4',dark:'#1A5080',light:'#E3F0FA'},
+  {name:'ラベンダー',mid:'#9090D4',dark:'#303880',light:'#EBEBFA'},
+  {name:'ライラック',mid:'#B08AC8',dark:'#583A78',light:'#F2E8FA'},
+  {name:'モーブ',mid:'#C490B8',dark:'#703868',light:'#F8E8F5'},
+  {name:'ベビーブルー',mid:'#90B8D4',dark:'#284C6C',light:'#E3EFF8'},
+  {name:'ティール',mid:'#70B4B0',dark:'#1A5C58',light:'#E0F3F2'},
+  {name:'シャンパン',mid:'#C8B898',dark:'#6C5030',light:'#F8F2E8'},
+  {name:'モカ',mid:'#B89878',dark:'#5C3A18',light:'#F5EDE3'},
+  {name:'スモーキーローズ',mid:'#C09898',dark:'#604040',light:'#F5EAEA'},
+  {name:'ダスティブルー',mid:'#8898B4',dark:'#283858',light:'#E8ECF5'},
+  {name:'チャコール',mid:'#6C7070',dark:'#303030',light:'#EBEBEB'},
+  {name:'スレート',mid:'#7080A0',dark:'#283050',light:'#E8ECF5'},
+  {name:'ダークグレー',mid:'#585858',dark:'#1A1A1A',light:'#EBEBEB'},
+  {name:'アッシュ',mid:'#888088',dark:'#382838',light:'#F0ECF0'},
+  {name:'ブラック',mid:'#2A2A2A',dark:'#000000',light:'#E8E8E8'},
+  {name:'ミッドナイト',mid:'#1A1A2E',dark:'#000010',light:'#E8E8F5'},
+  {name:'白（色なし）',mid:'#ffffff',dark:'#cccccc',light:'#f8f8f8',isWhite:true},
+];
+
+const STORAGE_KEY='kitchen_app_data';
+let CFG={palette:0,fs:13,titleTx:'auto'};
+const folderOpen={};
+const invFolderOpen={};
+const menuOpen={};  // 献立カードの開閉状態  // 在庫カテゴリの折りたたみ状態
+
+function loadData(){try{const r=localStorage.getItem(STORAGE_KEY);return r?JSON.parse(r):null;}catch{return null;}}
+function saveData(){
+  try{
+    localStorage.setItem(STORAGE_KEY,JSON.stringify({
+      invCats:S.invCats,recCats:S.recCats,inventory:S.inventory,
+      recipes:S.recipes,shopping:S.shopping,cfg:CFG
+    }));
+  }catch(e){console.warn(e);}
+}
+
+function applyTheme(){
+  const p=PALETTES[CFG.palette];
+  const app=document.getElementById('kapp');
+  app.style.setProperty('--ac-mid',p.mid);
+  app.style.setProperty('--ac-dark',p.dark);
+  app.style.setProperty('--ac-light',p.light);
+  app.style.setProperty('--bg-page',p.light+'cc');
+  let tx;
+  if(CFG.titleTx==='white'){tx='#ffffff';}
+  else if(CFG.titleTx==='black'){tx='#2a2a2a';}
+  else{if(p.isWhite){tx='#2a2a2a';}else{const dark=['#585858','#2A2A2A','#1A1A2E','#6C7070','#7080A0','#888088'];tx=dark.includes(p.mid)?'#ffffff':'#2a2a2a';}}
+  app.style.setProperty('--topbar-tx',tx);
+  app.style.setProperty('--folder-act-tx', p.isWhite ? '#444' : 'rgba(255,255,255,.85)');
+  app.style.setProperty('--fhc-tx', p.isWhite ? '#444' : '#fff');
+  app.style.setProperty('--check-bg', p.isWhite ? '#555' : null);
+  app.style.setProperty('--logo-tx', p.isWhite ? '#aaa' : '#fff');
+  app.style.setProperty('--check-tx', p.isWhite ? '#fff' : null);
+  applyFontSize(CFG.fs);
+}
+
+function applyFontSize(fs){
+  const fs2=fs-2;
+  const css=`
+.kapp .icard-name,.kapp .folder-name,.kapp .rec-row-name,.kapp .ir,.kapp .si,.kapp .btn,.kapp .add-all-btn,.kapp .shop-count,.kapp .cmr,.kapp .cfg-lbl,.kapp .cfg-row,.kapp .rec-sel-summary,.kapp .menu-plan-name,.kapp .em,.kapp .sheet input,.kapp .sheet select,.kapp .sheet textarea,.kapp .ier input,.kapp .ing-group-edit-header input,.kapp .ser textarea{font-size:${fs}px!important}
+.kapp .cat-lbl,.kapp .icard-qty,.kapp .icard-exp,.kapp .folder-count,.kapp .miss-badge,.kapp .rec-row-sv,.kapp .shr-lbl,.kapp .cfg-sub,.kapp .ing-group-label,.kapp .menu-plan-sv,.kapp .rec-url-link,.kapp .si-qty,.kapp .sbox h5,.kapp .bnav span,.kapp .sheet label,.kapp .btn.s,.kapp .seg-btn,.kapp .notice,.kapp .steps-compact{font-size:${fs2}px!important}
+.kapp .topbar-title,.kapp .sheet h3{font-size:${fs+2}px!important}
+.kapp .sbar input,.kapp .sbar-inv input,.kapp .sbar-inv select,.kapp .rec-sel-summary span{font-size:${fs}px!important}`;
+  let el=document.getElementById('__kfs__');
+  if(!el){el=document.createElement('style');el.id='__kfs__';document.head.appendChild(el);}
+  el.textContent=css;
+}
+
+function fmtDate(s){if(!s)return'';const[y,m,d]=s.split('-');return`${y}/${m}/${d}`;}
+function parseQty(s){if(!s)return{num:null,unit:''};const m=s.match(/^([\d.]+)\s*(.*)$/);if(!m)return{num:null,unit:s.trim()};return{num:parseFloat(m[1]),unit:m[2].trim()};}
+function sameUnit(a,b){const n=s=>s.replace(/個|ケ|ヶ/g,'個').replace(/本|束/g,'本').trim();return n(a)===n(b);}
+
+const S={
+  invCats:['野菜・果物','肉・魚','乳製品・卵','調味料','缶詰・乾物','冷凍食品','その他'],
+  recCats:['和食','洋食','中華','麺類','スープ','デザート','その他'],
+  inventory:[],
+  recipes:[],
+  shopping:[],selectedRecs:new Set(),nid:1,nrid:1,tab:'inv',curRec:null
+};
+
+(function init(){
+  const saved=loadData();
+  if(saved){
+    if(saved.invCats)S.invCats=saved.invCats;
+    if(saved.recCats)S.recCats=saved.recCats;
+    if(saved.inventory)S.inventory=saved.inventory;
+    if(saved.recipes){
+      S.recipes=saved.recipes;
+      S.recipes.forEach(r=>{if(r.ings&&!r.ingGroups){r.ingGroups=[{label:'',ings:r.ings}];delete r.ings;}});
+    }
+    if(saved.shopping)S.shopping=saved.shopping;
+    if(saved.cfg)Object.assign(CFG,saved.cfg);
+    S.nid=Math.max(20,...S.inventory.map(x=>x.id||0))+1;
+    S.nrid=Math.max(10,...S.recipes.map(x=>x.id||0))+1;
+  }
+  S.recCats.forEach((_,i)=>folderOpen[i]=false);
+  S.invCats.forEach((_,i)=>invFolderOpen[i]=true);
+})();
+
+function allIngs(r){return r.ingGroups.flatMap(g=>g.ings);}
+function calcMissing(){const needed=new Map();S.selectedRecs.forEach(rid=>{const r=S.recipes.find(x=>x.id===rid);if(!r)return;allIngs(r).forEach(ing=>{const key=ing.name.toLowerCase();const{num,unit}=parseQty(ing.qty);if(!needed.has(key))needed.set(key,{name:ing.name,byUnit:new Map()});const e=needed.get(key);let ok=false;for(const[u,n]of e.byUnit){if(sameUnit(u,unit)){e.byUnit.set(u,n+(num||0));ok=true;break;}}if(!ok)e.byUnit.set(unit,num||0);});});const res=[];needed.forEach((e,key)=>{const inv=S.inventory.find(x=>x.name.toLowerCase()===key);const{num:hN,unit:hU}=inv?parseQty(inv.qty):{num:0,unit:''};e.byUnit.forEach((nN,nU)=>{if(!nN||isNaN(nN)){if(!inv)res.push({name:e.name,displayQty:nU||''});return;}let sh;if(hN&&hN>0&&(sameUnit(hU,nU)||!hU)){sh=nN-hN;}else if(!inv){sh=nN;}else{sh=0;}if(sh>0){const d=Number.isInteger(sh)?sh:parseFloat(sh.toFixed(2));res.push({name:e.name,displayQty:`${d}${nU}`});}});});return res;}
+function missingCount(r){let c=0;allIngs(r).forEach(ing=>{const key=ing.name.toLowerCase();const inv=S.inventory.find(x=>x.name.toLowerCase()===key);const{num:nN,unit:nU}=parseQty(ing.qty);if(!inv){c++;return;}if(!nN||isNaN(nN))return;const{num:hN,unit:hU}=parseQty(inv.qty);if(hN&&hN>0&&sameUnit(hU,nU)&&nN>hN)c++;});return c;}
+function shopNames(){return new Set(S.shopping.map(x=>x.name.toLowerCase()));}
+function updateBadge(){const n=S.shopping.filter(x=>!x.checked).length;const b=document.getElementById('shop-bdg');b.style.display=n?'block':'none';b.textContent=n;}
+function updateShopCount(){const n=S.shopping.filter(x=>!x.checked).length;const el=document.getElementById('shop-count');if(el)el.textContent=n>0?`未購入 ${n}品`:'リストは空です';}
+
+function switchTab(t){
+  S.tab=t;
+  ['inv','rec','menu','shop'].forEach(x=>{
+    const s=document.getElementById('screen-'+x);if(s)s.classList.toggle('active',x===t);
+    const b=document.getElementById('bnav-'+x);if(b)b.classList.toggle('active',x===t);
+  });
+  const titles={inv:'在庫管理',rec:'レシピ',menu:'献立',shop:'買い物リスト'};
+  document.getElementById('topbar-title').textContent=titles[t]||t;
+
+  const showTop=t!=='shop'&&t!=='menu';
+  document.getElementById('cat-btn').style.display=showTop?'flex':'none';
+  document.getElementById('add-btn').style.display=showTop?'flex':'none';
+  if(t==='inv')renderInv();
+  if(t==='rec')renderRec();
+  if(t==='menu')renderMenu();
+  if(t==='shop')renderShop();
+}
+function handleAdd(){S.tab==='inv'?openItemSheet():openRecSheet();}
+function openCatManage(){catManageSheet(S.tab==='inv'?'inv':'rec');}
+
+function toggleInvFolder(ci){invFolderOpen[ci]=!invFolderOpen[ci];renderInv();}
+function renderInv(){
+  const q=document.getElementById('inv-search').value.toLowerCase();
+  const cf=document.getElementById('inv-cf').value;
+  const sel=document.getElementById('inv-cf');const pv=sel.value;
+  sel.innerHTML='<option value="">すべてのカテゴリ</option>';
+  S.invCats.forEach((c,i)=>sel.innerHTML+=`<option value="${i}">${c}</option>`);
+  sel.value=pv;
+  let html='';
+  // ★よく使う セクション
+  const favItems=S.inventory.filter(it=>it.fav&&it.name.toLowerCase().includes(q)&&(cf===''||parseInt(cf)===it.ci));
+  if(favItems.length){
+    const isOpen=invFolderOpen['fav']!==false;
+    html+=`<div class="fav-section"><div class="fav-section-header fhc" onclick="toggleInvFavFolder()">
+      <span style="font-size:16px">⭐</span>
+      <span class="fav-section-title">よく使う</span>
+      <span class="fav-count">${favItems.length}品</span>
+      <i class="bi bi-chevron-right inv-folder-chevron ${isOpen?'open':''}"></i>
+    </div>`;
+    if(isOpen){
+      html+=`<div style="padding:6px 10px 8px"><div class="inv-grid">`;
+      favItems.forEach(it=>{html+=icardHtml(it);});
+      html+=`</div></div>`;
+    }
+    html+=`</div>`;
+  }
+  // カテゴリフォルダ
+  let any=false;
+  S.invCats.forEach((cat,ci)=>{
+    if(cf!==''&&parseInt(cf)!==ci)return;
+    const items=S.inventory.filter(it=>it.ci===ci&&it.name.toLowerCase().includes(q));
+    if(!items.length)return;
+    any=true;
+    const isOpen=invFolderOpen[ci]!==false;
+    html+=`<div class="inv-folder"><div class="inv-folder-header fhc" onclick="toggleInvFolder(${ci})">
+      <i class="bi bi-${isOpen?'folder2-open':'folder2'}" style="font-size:16px;color:var(--ac-mid)"></i>
+      <span class="inv-folder-name">${cat}</span>
+      <span style="font-size:12px;color:#888">${items.length}品</span>
+      <i class="bi bi-chevron-right inv-folder-chevron ${isOpen?'open':''}"></i>
+    </div>`;
+    if(isOpen){
+      html+=`<div style="padding:6px 10px 8px"><div class="inv-grid">`;
+      items.forEach(it=>{html+=icardHtml(it);});
+      html+=`</div></div>`;
+    }
+    html+=`</div>`;
+  });
+  if(!favItems.length&&!any)html='<div class="em"><i class="bi bi-box-seam"></i>食材が見つかりません</div>';
+  document.getElementById('inv-c').innerHTML=html;updateBadge();
+}
+function toggleInvFavFolder(){invFolderOpen['fav']=invFolderOpen['fav']===false?true:false;renderInv();}
+function icardHtml(it){
+  const ic=shopNames().has(it.name.toLowerCase());
+  const fav=it.fav?'on':'';
+  return `<div class="icard"><div class="icard-top"><span class="icard-name">${it.name}</span>${it.exp?`<span class="icard-exp">${fmtDate(it.exp)}</span>`:''}</div><div class="icard-bottom"><span class="icard-qty">${it.qty}</span><div style="display:flex;align-items:center;gap:2px"><button class="star-btn ${fav}" onclick="toggleInvFav(${it.id})" title="よく使う">★</button><div class="icard-acts"><button class="icb" onclick="openItemSheet(${it.id})"><i class="bi bi-pencil"></i></button><button class="icb del" onclick="delItem(${it.id})"><i class="bi bi-trash"></i></button></div><button class="cart-icb ${ic?'in':''}" onclick="toggleCart(${it.id})"><i class="bi bi-cart-plus"></i></button></div></div></div>`;
+}
+function toggleInvFav(id){const it=S.inventory.find(x=>x.id===id);if(it){it.fav=!it.fav;renderInv();saveData();}}
+function toggleCart(id){const it=S.inventory.find(x=>x.id===id);const nm=it.name.toLowerCase();const idx=S.shopping.findIndex(x=>x.name.toLowerCase()===nm);if(idx>=0)S.shopping.splice(idx,1);else S.shopping.push({id:Date.now(),name:it.name,qty:it.qty,checked:false});renderInv();updateBadge();saveData();}
+function openItemSheet(id){const it=id?S.inventory.find(x=>x.id===id):null;const opts=S.invCats.map((c,i)=>`<option value="${i}"${it&&it.ci===i?' selected':''}>${c}</option>`).join('');showSheet(`<h3>${it?'食材を編集':'食材を追加'}</h3><div><label>食材名</label><input type="text" id="m-n" value="${it?it.name:''}"></div><div><label>数量・単位</label><input type="text" id="m-q" placeholder="例: 3個、200g" value="${it?it.qty:''}"></div><div><label>カテゴリ</label><select id="m-ci">${opts}</select></div><div><label>賞味期限（任意）</label><input type="date" id="m-exp" value="${it&&it.exp?it.exp:''}"></div><div class="sf">${it?`<button class="btn d" onclick="delItem(${it.id});closeSheet()"><i class="bi bi-trash"></i>削除</button>`:''}<button class="btn" onclick="closeSheet()">キャンセル</button><button class="btn p" onclick="saveItem(${id||0})">保存</button></div>`);setTimeout(()=>document.getElementById('m-n').focus(),50);}
+function saveItem(id){const name=document.getElementById('m-n').value.trim();const qty=document.getElementById('m-q').value.trim();const ci=parseInt(document.getElementById('m-ci').value);const exp=document.getElementById('m-exp').value;if(!name)return alert('食材名を入力してください');if(id){const it=S.inventory.find(x=>x.id===id);Object.assign(it,{name,qty,ci,exp});}else S.inventory.push({id:S.nid++,name,qty,ci,exp});closeSheet();renderInv();saveData();}
+function delItem(id){if(!confirm('削除しますか？'))return;S.inventory=S.inventory.filter(x=>x.id!==id);renderInv();saveData();}
+
+function toggleRecFavFolder(){folderOpen['fav']=folderOpen['fav']===false?true:false;renderRec();}
+function toggleRecFav(id,e){e.stopPropagation();const r=S.recipes.find(x=>x.id===id);if(r){r.fav=!r.fav;renderRec();saveData();}}
+function recRowHtml(r){
+  const isSel=S.selectedRecs.has(r.id);const mc=missingCount(r);const fav=r.fav?'on':'';
+  return `<div class="rec-row" id="rec-row-${r.id}">
+    <div class="rec-check ${isSel?'checked':''}" onclick="toggleRecSel(${r.id},event)">${isSel?'<i class="bi bi-check"></i>':''}</div>
+    <div class="rec-row-body" onclick="openDetail(${r.id})">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="rec-row-name">${r.name}</span>
+        <span style="font-size:11px;padding:1px 6px;border-radius:8px;white-space:nowrap;${mc>0?'background:#fff3cd;color:#856404':'background:#d4edda;color:#155724'}">${mc>0?`不足${mc}品`:'◎'}</span>
+      </div>
+      ${r.sv?`<div class="rec-row-sv">${r.sv}</div>`:''}
+    </div>
+    <button class="star-btn ${fav}" onclick="toggleRecFav(${r.id},event)" title="お気に入り">★</button>
+    <div class="rec-row-acts">
+      <button class="icb" onclick="openRecSheet(${r.id});event.stopPropagation()"><i class="bi bi-pencil"></i></button>
+      <button class="icb del" onclick="if(confirm('削除しますか？')){S.recipes=S.recipes.filter(x=>x.id!==${r.id});S.selectedRecs.delete(${r.id});renderRec();saveData();}event.stopPropagation()"><i class="bi bi-trash"></i></button>
+    </div>
+  </div>`;
+}
+function toggleFolder(ci){folderOpen[ci]=!folderOpen[ci];renderRec();}
+function updateAddAllBtn(){const missing=calcMissing();const btn=document.getElementById('add-all-btn');const lbl=document.getElementById('add-all-label');const txt=document.getElementById('rec-sel-txt');const n=S.selectedRecs.size;if(!n){txt.textContent='レシピを選んで不足食材をまとめて追加';lbl.textContent='追加';btn.disabled=true;}else{txt.textContent=`${n}品のレシピ選択中`;if(missing.length>0){lbl.textContent=`不足 ${missing.length}品を追加`;btn.disabled=false;}else{lbl.textContent='食材は揃っています';btn.disabled=true;}}}
+function toggleRecSel(rid,e){
+  e.stopPropagation();
+  if(S.selectedRecs.has(rid))S.selectedRecs.delete(rid);else S.selectedRecs.add(rid);
+  // 該当行のチェックボックスだけ更新
+  const row=document.getElementById('rec-row-'+rid);
+  if(row){
+    const isSel=S.selectedRecs.has(rid);
+    const chk=row.querySelector('.rec-check');
+    if(chk){chk.className='rec-check '+(isSel?'checked':'');chk.innerHTML=isSel?'<i class="bi bi-check"></i>':'';}
+  }
+  updateAddAllBtn();
+}
+function addAllMissing(){const missing=calcMissing();if(!missing.length)return;missing.forEach(m=>{const key=m.name.toLowerCase();if(!S.shopping.find(x=>x.name.toLowerCase()===key))S.shopping.push({id:Date.now()+Math.random(),name:m.name,qty:m.displayQty,checked:false});});updateBadge();toast(`${missing.length}品を買い物リストに追加しました`);S.selectedRecs.clear();renderRec();saveData();}
+
+function renderRec(){
+  const q=document.getElementById('rec-search').value.toLowerCase();
+  updateAddAllBtn();
+  let html='<div style="padding-bottom:8px">';
+  // ★お気に入りセクション
+  const favRecs=S.recipes.filter(r=>r.fav&&r.name.toLowerCase().includes(q));
+  if(favRecs.length){
+    const isOpen=folderOpen['fav']!==false;
+    html+=`<div class="fav-section"><div class="fav-section-header fhc" onclick="toggleRecFavFolder()">
+      <span style="font-size:16px">⭐</span>
+      <span class="fav-section-title">お気に入り</span>
+      <span class="fav-count">${favRecs.length}品</span>
+      <i class="bi bi-chevron-right inv-folder-chevron ${isOpen?'open':''}"></i>
+    </div>`;
+    if(isOpen){
+      html+=`<div class="folder-body">`;
+      favRecs.forEach(r=>{html+=recRowHtml(r);});
+      html+=`</div>`;
+    }
+    html+=`</div>`;
+  }
+  let any=false;
+  S.recCats.forEach((cat,ci)=>{
+    const items=S.recipes.filter(r=>r.ci===ci&&r.name.toLowerCase().includes(q));
+    if(!items.length)return;
+    any=true;
+    const isOpen=folderOpen[ci]!==false;
+    const totalMiss=items.reduce((s,r)=>s+missingCount(r),0);
+    html+=`<div class="folder"><div class="folder-header fhc" onclick="toggleFolder(${ci})">
+      <i class="folder-icon bi ${isOpen?'bi-folder2-open':'bi-folder2'}"></i>
+      <span class="folder-name">${cat}</span>
+      <div class="folder-meta">
+        <span class="folder-count">${items.length}品</span>
+        ${totalMiss>0?`<span class="miss-badge">不足 ${totalMiss}品</span>`:`<span class="miss-badge ok">◎</span>`}
+      </div>
+      <div class="folder-acts" onclick="e=>e.stopPropagation()">
+        <button class="icb" onclick="openRecSheet(0,${ci});event.stopPropagation()"><i class="bi bi-plus-lg"></i></button>
+        <button class="icb" onclick="editCat('rec',${ci});event.stopPropagation()"><i class="bi bi-pencil"></i></button>
+        <button class="icb del" onclick="delCat('rec',${ci});event.stopPropagation()"><i class="bi bi-trash"></i></button>
+      </div>
+      <i class="folder-chevron bi bi-chevron-right ${isOpen?'open':''}"></i>
+    </div>`;
+    if(isOpen){
+      html+=`<div class="folder-body">`;
+      items.forEach(r=>{
+        html+=recRowHtml(r);
+      });
+      html+=`</div>`;
+    }
+    html+=`</div>`;
+  });
+  if(!any)html='<div class="em"><i class="bi bi-journal-richtext"></i>'+(q?`「${q}」が見つかりません`:'レシピがありません')+'<br><button class="btn p" style="margin-top:12px" onclick="openRecSheet()"><i class="bi bi-plus-lg"></i>レシピを追加</button></div>';
+  html+='</div>';
+  document.getElementById('rec-c').innerHTML=html;
+}
+
+function renderIngGroups(r,inv){
+  let html='';
+  r.ingGroups.forEach(grp=>{
+    const hasLabel=grp.label&&grp.label.trim();
+    if(hasLabel)html+=`<div class="ing-group"><div class="ing-group-label">${grp.label}</div><div class="ing-group-rows">`;
+    grp.ings.forEach(ing=>{
+      const key=ing.name.toLowerCase();const invItem=inv?inv.find(x=>x.name.toLowerCase()===key):null;
+      const{num:nN,unit:nU}=parseQty(ing.qty);let sh=false;
+      if(inv){if(!invItem){sh=true;}else if(nN&&!isNaN(nN)){const{num:hN,unit:hU}=parseQty(invItem.qty);if(hN&&sameUnit(hU,nU)&&nN>hN)sh=true;}}
+      html+=`<div class="ir${sh?' miss':''}"><span>${ing.name}${sh?'<i class="bi bi-exclamation-triangle" style="font-size:11px;margin-left:3px"></i>':''}</span><span>${ing.qty}</span></div>`;
+    });
+    if(hasLabel)html+=`</div></div>`;
+  });
+  return html;
+}
+function urlHtml(r){return r.url?`<a href="${r.url}" class="rec-url-link" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right" style="font-size:12px;flex-shrink:0"></i>${r.url}</a>`:'';}
+
+function openDetail(id){
+  S.curRec=id;
+  document.getElementById('rec-lv').style.display='none';
+  document.getElementById('rec-dv').classList.add('active');
+  document.getElementById('topbar-title').textContent='レシピ詳細';
+  document.getElementById('cat-btn').style.display='none';
+  document.getElementById('add-btn').style.display='none';
+  const r=S.recipes.find(x=>x.id===id);
+  document.getElementById('det-edit').onclick=()=>openRecSheet(id);
+  document.getElementById('det-del').onclick=()=>{if(confirm('削除しますか？')){S.recipes=S.recipes.filter(x=>x.id!==id);S.selectedRecs.delete(id);closeDetail();saveData();}};
+  const ingHtml=renderIngGroups(r,S.inventory);
+  const steps=r.steps.map((s,i)=>`<div style="display:flex;gap:8px;font-size:13px;line-height:1.5;padding:4px 0;border-bottom:.5px solid #f0f0f0;color:#333"><span class="snum">${i+1}</span><span>${s}</span></div>`).join('');
+  document.getElementById('rec-dc').innerHTML=`
+    <div style="margin-bottom:8px">
+      <div style="font-size:19px;font-weight:500;margin-bottom:2px;color:#333">${r.name}</div>
+      <div style="font-size:12px;color:#aaa;margin-bottom:4px">${S.recCats[r.ci]||''}${r.sv?' · '+r.sv:''}</div>
+      ${urlHtml(r)}
+    </div>
+    <div class="sbox"><h5>材料</h5>${ingHtml}</div>
+    <div class="sbox"><h5>作り方</h5>${steps}</div>`;
+}
+function closeDetail(){
+  S.curRec=null;
+  document.getElementById('rec-lv').style.display='flex';
+  document.getElementById('rec-dv').classList.remove('active');
+  document.getElementById('topbar-title').textContent='レシピ';
+  document.getElementById('cat-btn').style.display='flex';
+  document.getElementById('add-btn').style.display='flex';
+  renderRec();
+}
+
+function openRecSheet(id,defaultCi){
+  const r=id?S.recipes.find(x=>x.id===id):null;
+  const opts=S.recCats.map((c,i)=>`<option value="${i}"${r?r.ci===i?' selected':'':i===(defaultCi||0)?' selected':''}>${c}</option>`).join('');
+  const initGroups=r?r.ingGroups:[{label:'',ings:[{name:'',qty:''}]}];
+  function buildGroupHtml(groups){return groups.map((grp,gi)=>{const iRows=grp.ings.map((ig,ii)=>`<div class="ier" id="ir${gi}_${ii}"><input type="text" placeholder="食材名" value="${ig.name}" id="in${gi}_${ii}" style="flex:2"><input type="text" placeholder="分量" value="${ig.qty}" id="iq${gi}_${ii}" style="flex:1"><button onclick="rmIngRow(${gi},${ii})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button></div>`).join('');return`<div class="ing-group-edit" id="grp${gi}"><div class="ing-group-edit-header"><input type="text" placeholder="グループ名（例: タレ）省略可" value="${grp.label}" id="gl${gi}"><button onclick="rmGroup(${gi})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button></div><div id="ings${gi}">${iRows}</div><button class="btn s" style="margin-top:4px" onclick="addIngRow(${gi})"><i class="bi bi-plus-lg"></i>食材追加</button></div>`;}).join('');}
+  const sRows=(r?r.steps:['','']).map((s,i)=>`<div class="ser" id="sr${i}"><span class="snum">${i+1}</span><textarea id="ss${i}">${s}</textarea><button onclick="document.getElementById('sr${i}').remove()" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0;margin-top:4px">×</button></div>`).join('');
+  showSheet(`<h3>${r?'レシピを編集':'レシピを追加'}</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+      <div style="grid-column:1/-1"><label>レシピ名</label><input type="text" id="rn" value="${r?r.name:''}"></div>
+      <div><label>フォルダ</label><select id="rci">${opts}</select></div>
+      <div><label>人数</label><input type="text" id="rsv" placeholder="2人分" value="${r?r.sv:''}"></div>
+      <div style="grid-column:1/-1"><label>参考URL（任意）</label><input type="url" id="rurl" placeholder="https://..." value="${r?r.url||'':''}"></div>
+    </div>
+    <div><label>材料</label><div id="grp-editor" style="display:flex;flex-direction:column;gap:5px">${buildGroupHtml(initGroups)}</div><button class="btn s" style="margin-top:6px" onclick="addGroup()"><i class="bi bi-folder-plus"></i>グループを追加</button></div>
+    <div><label>作り方</label><div id="step-ed">${sRows}</div><button class="btn s" style="margin-top:5px" onclick="addSRow()"><i class="bi bi-plus-lg"></i>追加</button></div>
+    <div class="sf"><button class="btn" onclick="closeSheet()">キャンセル</button><button class="btn p" onclick="saveRec(${id||0})">保存</button></div>`);
+  setTimeout(()=>document.getElementById('rn').focus(),50);
+}
+function addGroup(){const ed=document.getElementById('grp-editor');const gi=ed.querySelectorAll('.ing-group-edit').length;const d=document.createElement('div');d.className='ing-group-edit';d.id='grp'+gi;d.innerHTML=`<div class="ing-group-edit-header"><input type="text" placeholder="グループ名（例: タレ）省略可" id="gl${gi}"><button onclick="rmGroup(${gi})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button></div><div id="ings${gi}"><div class="ier" id="ir${gi}_0"><input type="text" placeholder="食材名" id="in${gi}_0" style="flex:2"><input type="text" placeholder="分量" id="iq${gi}_0" style="flex:1"><button onclick="rmIngRow(${gi},0)" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button></div></div><button class="btn s" style="margin-top:4px" onclick="addIngRow(${gi})"><i class="bi bi-plus-lg"></i>食材追加</button>`;ed.appendChild(d);}
+function rmGroup(gi){const el=document.getElementById('grp'+gi);if(el)el.remove();}
+function addIngRow(gi){const cont=document.getElementById('ings'+gi);if(!cont)return;const ii=cont.querySelectorAll('.ier').length;const d=document.createElement('div');d.className='ier';d.id=`ir${gi}_${ii}`;d.innerHTML=`<input type="text" placeholder="食材名" id="in${gi}_${ii}" style="flex:2"><input type="text" placeholder="分量" id="iq${gi}_${ii}" style="flex:1"><button onclick="rmIngRow(${gi},${ii})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button>`;cont.appendChild(d);}
+function rmIngRow(gi,ii){const el=document.getElementById(`ir${gi}_${ii}`);if(el)el.remove();}
+function addSRow(){const ed=document.getElementById('step-ed');const i=ed.querySelectorAll('[id^=sr]').length;const d=document.createElement('div');d.className='ser';d.id='sr'+i;d.innerHTML=`<span class="snum">${i+1}</span><textarea id="ss${i}" placeholder="手順..."></textarea><button onclick="this.parentNode.remove()" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0;margin-top:4px">×</button>`;ed.appendChild(d);}
+function saveRec(id){
+  const name=document.getElementById('rn').value.trim();if(!name)return alert('レシピ名を入力してください');
+  const ci=parseInt(document.getElementById('rci').value);
+  const sv=document.getElementById('rsv').value.trim();
+  const url=document.getElementById('rurl').value.trim();
+  const ingGroups=[];
+  document.querySelectorAll('.ing-group-edit').forEach(grpEl=>{
+    const gi=grpEl.id.replace('grp','');
+    const label=((document.getElementById('gl'+gi)||{}).value||'').trim();
+    const ings=[];
+    grpEl.querySelectorAll('.ier').forEach(row=>{
+      const ii=row.id.split('_')[1];
+      const n=document.getElementById(`in${gi}_${ii}`);const q=document.getElementById(`iq${gi}_${ii}`);
+      if(n&&n.value.trim())ings.push({name:n.value.trim(),qty:q?q.value.trim():''});
+    });
+    if(ings.length)ingGroups.push({label,ings});
+  });
+  if(!ingGroups.length)ingGroups.push({label:'',ings:[]});
+  const steps=[];
+  document.querySelectorAll('[id^=sr]').forEach(row=>{const x=row.id.slice(2);const el=document.getElementById('ss'+x);if(el&&el.value.trim())steps.push(el.value.trim());});
+  if(id){const r=S.recipes.find(x=>x.id===id);Object.assign(r,{name,ci,sv,url,ingGroups,steps});}
+  else{S.recipes.push({id:S.nrid++,name,ci,sv,url,ingGroups,steps});folderOpen[ci]=true;}
+  closeSheet();
+  if(S.curRec===id&&id)openDetail(id);else closeDetail();
+  saveData();
+}
+
+function toggleMenuCard(rid){menuOpen[rid]=!menuOpen[rid];renderMenu();}
+function renderMenu(){
+  const lbl=document.getElementById('menu-sel-lbl');
+  if(!S.selectedRecs.size){lbl.textContent='レシピタブでチェックを入れてください';document.getElementById('menu-c').innerHTML='<div class="em"><i class="bi bi-egg-fried"></i>レシピを選ぶと献立が表示されます</div>';return;}
+  lbl.textContent=`${S.selectedRecs.size}品のレシピを選択中`;
+  let html='<div style="padding-bottom:8px">';
+  S.selectedRecs.forEach(rid=>{
+    const r=S.recipes.find(x=>x.id===rid);if(!r)return;
+    // 初回は開いた状態
+    if(menuOpen[rid]===undefined)menuOpen[rid]=true;
+    const isOpen=menuOpen[rid];
+    const ingHtml=renderIngGroups(r,S.inventory);
+    const steps=r.steps.map((s,i)=>`<div class="step"><span class="step-n">${i+1}</span><span>${s}</span></div>`).join('');
+    const missCount=missingCount(r);
+    html+=`<div class="menu-plan-card">
+      <div class="menu-plan-header fhc" onclick="toggleMenuCard(${rid})">
+        <div class="menu-plan-title">
+          <span class="menu-plan-name">${r.name}</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            ${r.sv?`<span class="menu-plan-sv">${r.sv}</span>`:''}
+            <span style="font-size:10px;padding:1px 6px;border-radius:8px;${missCount>0?'background:#fff3cd;color:#856404':'background:#d4edda;color:#155724'}">${missCount>0?`不足${missCount}品`:'◎'}</span>
+          </div>
+        </div>
+        <i class="bi bi-chevron-right menu-plan-chevron ${isOpen?'open':''}"></i>
+      </div>
+      ${isOpen?`<div class="menu-plan-body">
+        ${r.url?`<a href="${r.url}" class="rec-url-link" style="margin-bottom:8px;display:flex" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right" style="font-size:12px;flex-shrink:0"></i>${r.url}</a>`:''}
+        <div class="sbox" style="margin-bottom:8px"><h5>材料</h5>${ingHtml}</div>
+        <div class="steps-compact">${steps}</div>
+      </div>`:''}
+    </div>`;
+  });
+  html+='</div>';
+  document.getElementById('menu-c').innerHTML=html;
+}
+function clearMenuSel(){S.selectedRecs.clear();renderMenu();if(S.tab==='rec')renderRec();}
+
+function renderShop(){
+  const unc=S.shopping.filter(x=>!x.checked);const chk=S.shopping.filter(x=>x.checked);updateShopCount();
+  if(!S.shopping.length){document.getElementById('shop-c').innerHTML=`<div class="em"><i class="bi bi-cart3"></i>リストは空です<div style="font-size:12px;color:#bbb;line-height:1.8;margin-top:10px;background:#fff;border-radius:10px;padding:10px 14px;text-align:left"><b style="color:#888">追加方法</b><br>① 上の「食材を追加」ボタン<br>② レシピを選んで不足食材を自動追加<br>③ 在庫タブの <i class="bi bi-cart-plus"></i> から個別追加</div></div>`;updateBadge();return;}
+  let h='<div style="padding-bottom:6px">';
+  if(unc.length){h+=`<div class="cat-lbl">未購入 <span style="font-weight:400;color:#bbb">${unc.length}品</span>${chk.length?`<button class="btn s d" style="margin-left:auto" onclick="clearChk()"><i class="bi bi-trash"></i>購入済みを削除</button>`:''}</div>`;unc.forEach(it=>h+=siHtml(it));}
+  if(chk.length){h+=`<div class="cat-lbl" style="margin-top:8px">購入済み <span style="font-weight:400;color:#bbb">${chk.length}品</span><button class="btn s d" style="margin-left:auto" onclick="clearChk()"><i class="bi bi-trash"></i>削除</button></div>`;chk.forEach(it=>h+=siHtml(it));}
+  h+='</div>';document.getElementById('shop-c').innerHTML=h;updateBadge();
+}
+function siHtml(it){return`<div class="si ${it.checked?'chk':''}"><input type="checkbox" ${it.checked?'checked':''} onchange="toggleShop('${it.id}')"><span class="si-name" style="flex:1">${it.name}</span><span class="si-qty">${it.qty}</span><button class="icb del" onclick="rmShop('${it.id}')"><i class="bi bi-x-lg"></i></button></div>`;}
+function toggleShop(id){const it=S.shopping.find(x=>String(x.id)===String(id));if(it)it.checked=!it.checked;renderShop();saveData();}
+function rmShop(id){S.shopping=S.shopping.filter(x=>String(x.id)!==String(id));renderShop();saveData();}
+function clearChk(){S.shopping=S.shopping.filter(x=>!x.checked);renderShop();saveData();}
+function addManual(){showSheet(`<h3>食材を追加</h3><div><label>食材名</label><input type="text" id="sh-n" placeholder="例: 豆腐、パスタ"></div><div><label>数量・単位（任意）</label><input type="text" id="sh-q" placeholder="例: 1丁、200g"></div><div class="sf"><button class="btn" onclick="closeSheet()">キャンセル</button><button class="btn p" onclick="saveMnl()"><i class="bi bi-plus-lg"></i>追加</button></div>`);setTimeout(()=>document.getElementById('sh-n').focus(),50);}
+function saveMnl(){const n=document.getElementById('sh-n').value.trim();if(!n)return alert('食材名を入力してください');S.shopping.push({id:Date.now(),name:n,qty:document.getElementById('sh-q').value.trim(),checked:false});closeSheet();renderShop();saveData();}
+
+function catManageSheet(type){const cats=type==='inv'?S.invCats:S.recCats;const rows=cats.map((c,i)=>`<div class="cmr"><span style="flex:1">${c}</span><button class="btn s" onclick="editCat('${type}',${i})">変更</button><button class="btn s d" onclick="delCat('${type}',${i})"><i class="bi bi-trash"></i></button></div>`).join('');showSheet(`<h3>カテゴリ管理（${type==='inv'?'在庫':'レシピフォルダ'}）</h3><div style="border:.5px solid #e0e0e0;border-radius:9px;padding:4px 11px;max-height:160px;overflow-y:auto">${rows||'<div style="padding:8px;color:#bbb">なし</div>'}</div><div style="display:flex;gap:6px"><input type="text" id="nc" placeholder="新しいカテゴリ名" style="flex:1"><button class="btn p" onclick="addCat('${type}')"><i class="bi bi-plus-lg"></i>追加</button></div><div class="sf"><button class="btn" onclick="closeSheet()">閉じる</button></div>`);}
+function addCat(t){const n=document.getElementById('nc').value.trim();if(!n)return;const cats=t==='inv'?S.invCats:S.recCats;cats.push(n);if(t==='rec')folderOpen[cats.length-1]=true;document.getElementById('nc').value='';catManageSheet(t);t==='inv'?renderInv():renderRec();saveData();}
+function editCat(t,i){const cats=t==='inv'?S.invCats:S.recCats;const n=prompt('カテゴリ名を変更:',cats[i]);if(!n||!n.trim())return;cats[i]=n.trim();if(document.getElementById('mw').style.display!=='none')catManageSheet(t);t==='inv'?renderInv():renderRec();saveData();}
+function delCat(t,i){const cats=t==='inv'?S.invCats:S.recCats;const items=t==='inv'?S.inventory:S.recipes;const cnt=items.filter(x=>x.ci===i).length;if(cnt>0&&!confirm(`「${cats[i]}」には${cnt}件あります。削除すると「その他」へ移動します。`))return;items.forEach(x=>{if(x.ci===i)x.ci=cats.length-1;else if(x.ci>i)x.ci--;});cats.splice(i,1);if(document.getElementById('mw').style.display!=='none')catManageSheet(t);t==='inv'?renderInv():renderRec();saveData();}
+
+function openCfg(){
+  const sw=PALETTES.map((p,i)=>{const isWhite=p.isWhite;return`<div class="swatch ${CFG.palette===i?'on':''}" style="background:${p.mid};${isWhite?'border:1.5px solid #ccc':''}" onclick="setCfgPalette(${i})" title="${p.name}">${isWhite?'<i class="bi bi-x" style="font-size:10px;color:#ccc"></i>':''}</div>`;}).join('');
+  showSheet(`<h3>設定</h3>
+    <div style="border:.5px solid #e0e0e0;border-radius:10px;padding:0 12px">
+      <div class="cfg-row" style="flex-direction:column;align-items:flex-start;gap:7px">
+        <div class="cfg-lbl">アクセントカラー</div><div class="sw-grid">${sw}</div>
+        <div class="cfg-sub" id="pal-name">${PALETTES[CFG.palette].name}</div>
+      </div>
+      <div class="cfg-row">
+        <div><div class="cfg-lbl">タイトルの文字色</div><div class="cfg-sub">ヘッダーの文字・アイコン色</div></div>
+        <div class="seg">
+          <button class="seg-btn ${CFG.titleTx==='auto'?'on':''}" onclick="setCfgTitleTx('auto')">自動</button>
+          <button class="seg-btn ${CFG.titleTx==='white'?'on':''}" onclick="setCfgTitleTx('white')" style="background:#555;color:#fff;border-color:#333">白</button>
+          <button class="seg-btn ${CFG.titleTx==='black'?'on':''}" onclick="setCfgTitleTx('black')" style="background:#f0f0f0;color:#333;border-color:#bbb">黒</button>
+        </div>
+      </div>
+      <div class="cfg-row" style="flex-direction:column;align-items:flex-start;gap:5px">
+        <div class="cfg-lbl">文字サイズ <span class="cfg-sub" id="cfg-fs-prev">${CFG.fs}px</span></div>
+        <div class="fs-row"><span class="cfg-sub">小</span><input type="range" min="11" max="16" step="1" value="${CFG.fs}" id="cfg-fs" oninput="setCfgFs(this.value)"><span class="cfg-sub">大</span></div>
+      </div>
+      <div class="cfg-row"><div><div class="cfg-lbl">バックアップ</div><div class="cfg-sub">JSONファイルに書き出し</div></div><button class="btn s" onclick="doExport()"><i class="bi bi-download"></i>エクスポート</button></div>
+      <div class="cfg-row"><div><div class="cfg-lbl">インポート</div><div class="cfg-sub">JSONファイルから復元</div></div><button class="btn s" onclick="document.getElementById('import-file').click()"><i class="bi bi-upload"></i>インポート</button></div>
+      <div class="cfg-row"><div><div class="cfg-lbl">使い方</div><div class="cfg-sub">機能の説明を見る</div></div><button class="btn s" onclick="openHelp()"><i class="bi bi-question-circle"></i>開く</button></div>
+      <div class="cfg-row"><div><div class="cfg-lbl" style="color:#c0392b">データをリセット</div><div class="cfg-sub">すべてのデータを初期状態に戻す</div></div><button class="btn s d" onclick="doReset()"><i class="bi bi-arrow-counterclockwise"></i>リセット</button></div>
+    </div>
+    <div class="sf"><button class="btn p" onclick="closeSheet()">閉じる</button></div>`);
+}
+function setCfgPalette(i){CFG.palette=i;applyTheme();document.querySelectorAll('.swatch').forEach((el,j)=>el.classList.toggle('on',j===i));const lbl=document.getElementById('pal-name');if(lbl)lbl.textContent=PALETTES[i].name;saveData();}
+function setCfgTitleTx(v){CFG.titleTx=v;applyTheme();document.querySelectorAll('.seg-btn').forEach(btn=>{const t=btn.textContent.trim();btn.classList.toggle('on',(v==='auto'&&t==='自動')||(v==='white'&&t==='白')||(v==='black'&&t==='黒'));});saveData();}
+function setCfgFs(v){CFG.fs=parseInt(v);applyFontSize(CFG.fs);const p=document.getElementById('cfg-fs-prev');if(p)p.textContent=CFG.fs+'px';saveData();}
+function doExport(){const data=JSON.stringify({invCats:S.invCats,recCats:S.recCats,inventory:S.inventory,recipes:S.recipes,shopping:S.shopping,cfg:CFG},null,2);const blob=new Blob([data],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;const d=new Date();a.download=`Pantryno_backup_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;a.click();URL.revokeObjectURL(url);toast('エクスポートしました');}
+function doImport(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.invCats)S.invCats=d.invCats;if(d.recCats)S.recCats=d.recCats;if(d.inventory)S.inventory=d.inventory;if(d.recipes){S.recipes=d.recipes;S.recipes.forEach(r=>{if(r.ings&&!r.ingGroups){r.ingGroups=[{label:'',ings:r.ings}];delete r.ings;}});}if(d.shopping)S.shopping=d.shopping;if(d.cfg){Object.assign(CFG,d.cfg);applyTheme();}S.recCats.forEach((_,i)=>folderOpen[i]=false);S.nid=Math.max(20,...S.inventory.map(x=>x.id||0))+1;S.nrid=Math.max(10,...S.recipes.map(x=>x.id||0))+1;saveData();closeSheet();renderInv();renderRec();renderShop();updateBadge();toast('インポートしました');}catch{alert('ファイルの形式が正しくありません');}};reader.readAsText(file);e.target.value='';}
+function openHelp(){
+  showSheet(`<h3><i class="bi bi-question-circle" style="margin-right:6px"></i>使い方</h3>
+
+  <div style="display:flex;flex-direction:column;gap:12px">
+
+    <div style="background:var(--ac-light);border-radius:10px;padding:12px 14px">
+      <div style="font-size:13px;font-weight:700;color:var(--ac-dark);margin-bottom:8px">📦 在庫タブ</div>
+      <div style="font-size:12px;color:#555;line-height:1.8">
+        食材・食品の在庫を管理します。<br>
+        <b>追加</b>：右上の＋ボタンで食材を追加。名前・数量・カテゴリ・賞味期限を入力できます。<br>
+        <b>よく使う★</b>：食材カードの★をタップするとよく使うリストに登録。一覧の上部に表示されます。<br>
+        <b>カテゴリ</b>：フォルダアイコン横の編集ボタンでカテゴリの追加・変更・削除が可能。<br>
+        <b>買い物リストへ</b>：カードの🛒アイコンで買い物リストに追加できます。
+      </div>
+    </div>
+
+    <div style="background:var(--ac-light);border-radius:10px;padding:12px 14px">
+      <div style="font-size:13px;font-weight:700;color:var(--ac-dark);margin-bottom:8px">📖 レシピタブ</div>
+      <div style="font-size:12px;color:#555;line-height:1.8">
+        レシピをフォルダ別に管理します。<br>
+        <b>追加</b>：右上の＋ボタン、またはフォルダの＋ボタンでレシピを追加。<br>
+        <b>お気に入り★</b>：レシピ行の★でお気に入り登録。一覧上部に表示されます。<br>
+        <b>不足確認</b>：在庫と照らし合わせ、足りない食材を自動で表示します。<br>
+        <b>買い物リストへ</b>：レシピ行のチェックボックスで複数選択し「不足◯品を追加」ボタンで一括追加。
+      </div>
+    </div>
+
+    <div style="background:var(--ac-light);border-radius:10px;padding:12px 14px">
+      <div style="font-size:13px;font-weight:700;color:var(--ac-dark);margin-bottom:8px">🍳 献立タブ</div>
+      <div style="font-size:12px;color:#555;line-height:1.8">
+        レシピタブでチェックを入れたレシピが献立として表示されます。<br>
+        <b>折りたたみ</b>：カード上部をタップすると折りたたんでコンパクトに表示できます。<br>
+        材料の不足状況も確認できます。
+      </div>
+    </div>
+
+    <div style="background:var(--ac-light);border-radius:10px;padding:12px 14px">
+      <div style="font-size:13px;font-weight:700;color:var(--ac-dark);margin-bottom:8px">🛒 買い物タブ</div>
+      <div style="font-size:12px;color:#555;line-height:1.8">
+        買い物リストを管理します。<br>
+        <b>追加方法</b>：①「食材を追加」ボタン ②レシピから不足食材を自動追加 ③在庫タブの🛒アイコン<br>
+        <b>購入済み</b>：チェックを入れると購入済みに移動。まとめて削除できます。<br>
+        <b>共有</b>：LINEへの送信やテキストコピーが可能です。
+      </div>
+    </div>
+
+    <div style="background:var(--ac-light);border-radius:10px;padding:12px 14px">
+      <div style="font-size:13px;font-weight:700;color:var(--ac-dark);margin-bottom:8px">⚙️ 設定</div>
+      <div style="font-size:12px;color:#555;line-height:1.8">
+        <b>アクセントカラー</b>：アプリ全体のカラーテーマを変更できます。<br>
+        <b>バックアップ</b>：エクスポートでJSONファイルに保存。インポートで復元できます。<br>
+        <b>データはブラウザに自動保存</b>されます（localStorage使用）。
+      </div>
+    </div>
+
+  </div>
+
+  <div class="sf"><button class="btn p" onclick="closeSheet()">閉じる</button></div>`);
+}
+function doReset(){
+  if(!confirm('すべてのデータをリセットしますか？\nこの操作は取り消せません。'))return;
+  S.inventory=[];
+  S.recipes=[];
+  S.shopping=[];
+  S.selectedRecs=new Set();
+  S.nid=1;S.nrid=1;
+  localStorage.removeItem(STORAGE_KEY);
+  closeSheet();
+  renderInv();renderRec();renderShop();renderMenu();updateBadge();
+  toast('リセットしました');
+}
+
+function getListText(){const items=S.shopping.filter(x=>!x.checked);return items.length?'🛒 買い物リスト\n'+items.map(x=>`・${x.name}${x.qty?' ('+x.qty+')':''}`).join('\n'):null;}
+function shareToLine(){const t=getListText();if(!t)return alert('買い物リストが空です');window.open('https://line.me/R/msg/text/?'+encodeURIComponent(t),'_blank','noopener');}
+function addToReminders(){if(!S.shopping.filter(x=>!x.checked).length)return alert('買い物リストが空です');showSheet(`<h3>リマインダーに追加</h3><div class="notice">ブラウザの制限により直接追加はできません。</div><ol style="font-size:13px;line-height:2.2;padding-left:18px"><li>「コピーして閉じる」でリストをコピー</li><li>リマインダーアプリを開く</li><li>Siriに伝えるか手動でペースト</li></ol><div class="sf"><button class="btn" onclick="closeSheet()">閉じる</button><button class="btn p" onclick="copyList();closeSheet()"><i class="bi bi-clipboard"></i>コピーして閉じる</button></div>`);}
+function copyList(){const t=getListText();if(!t)return alert('リストが空です');navigator.clipboard.writeText(t).then(()=>toast('コピーしました！')).catch(()=>{const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('コピーしました！');});}
+
+function toast(msg){const ex=document.querySelector('.toast');if(ex)ex.remove();const t=document.createElement('div');t.className='toast';t.textContent=msg;document.getElementById('kapp').appendChild(t);setTimeout(()=>t.remove(),2500);}
+function showSheet(html){document.getElementById('sheet').innerHTML=html;document.getElementById('mw').style.display='flex';}
+function closeSheet(){document.getElementById('mw').style.display='none';}
+function closeMW(e){if(e.target===document.getElementById('mw'))closeSheet();}
+
+applyTheme();renderInv();renderRec();renderShop();updateBadge();
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW:',e));
+  });
+}
+</script>
+</body>
+</html>
