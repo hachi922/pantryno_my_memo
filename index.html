@@ -224,6 +224,7 @@ body{display:flex;justify-content:center;align-items:flex-start;min-height:100vh
 
 <div class="screen" id="screen-shop">
   <div class="shop-topbar"><span class="screen-label">買い物</span><span class="shop-count" id="shop-count">リストは空です</span><button class="shop-add-btn" onclick="addManual()"><i class="bi bi-plus-lg"></i>食材を追加</button></div>
+  <div id="shop-toolbar" style="display:flex;align-items:center;gap:6px;padding:5px 12px;background:#fff;border-bottom:0.5px solid #e0e0e0;min-height:38px;flex-shrink:0"></div>
   <div class="scroll" id="shop-c"></div>
   <div class="shr"><button class="shr-btn" onclick="shareToLine()" title="LINE"><i class="bi bi-chat-dots"></i></button><button class="shr-btn" onclick="copyList()" title="コピー"><i class="bi bi-clipboard"></i></button></div>
 </div>
@@ -272,7 +273,9 @@ const STORAGE_KEY='kitchen_app_data';
 let CFG={palette:0,fs:13,titleTx:'auto'};
 const folderOpen={};
 const invFolderOpen={};
-const menuOpen={};  // 献立カードの開閉状態  // 在庫カテゴリの折りたたみ状態
+const menuOpen={};
+let shopSelectMode=false;  // 選択削除モード
+const shopSelected=new Set();  // 選択中のID  // 献立カードの開閉状態  // 在庫カテゴリの折りたたみ状態
 
 function loadData(){try{const r=localStorage.getItem(STORAGE_KEY);return r?JSON.parse(r):null;}catch{return null;}}
 function saveData(){
@@ -672,8 +675,27 @@ function renderShop(){
   if(chk.length){h+=`<div class="cat-lbl" style="margin-top:8px">購入済み <span style="font-weight:400;color:#bbb">${chk.length}品</span><button class="btn s d" style="margin-left:auto" onclick="clearChk()"><i class="bi bi-trash"></i>削除</button></div>`;chk.forEach(it=>h+=siHtml(it));}
   h+='</div>';document.getElementById('shop-c').innerHTML=h;updateBadge();
 }
-function siHtml(it){return`<div class="si ${it.checked?'chk':''}"><input type="checkbox" ${it.checked?'checked':''} onchange="toggleShop('${it.id}')"><span class="si-name" style="flex:1">${it.name}</span><span class="si-qty">${it.qty}</span><button class="icb del" onclick="rmShop('${it.id}')"><i class="bi bi-x-lg"></i></button></div>`;}
+function siHtml(it){
+  const id=String(it.id);
+  if(shopSelectMode){
+    const sel=shopSelected.has(id);
+    return`<div class="si ${it.checked?'chk':''}" onclick="toggleShopSelect('${id}')" style="cursor:pointer;${sel?'background:var(--ac-light);border-color:var(--ac-mid)':''}">
+      <div style="width:20px;height:20px;border:1.5px solid ${sel?'var(--ac-mid)':'#ddd'};border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:${sel?'var(--ac-mid)':'#fff'}">${sel?'<i class="bi bi-check" style="color:#fff;font-size:13px"></i>':''}</div>
+      <span class="si-name" style="flex:1">${it.name}</span>
+      <span class="si-qty">${it.qty}</span>
+    </div>`;
+  }
+  return`<div class="si ${it.checked?'chk':''}"><input type="checkbox" ${it.checked?'checked':''} onchange="toggleShop('${it.id}')"><span class="si-name" style="flex:1">${it.name}</span><span class="si-qty">${it.qty}</span><button class="icb del" onclick="rmShop('${it.id}')"><i class="bi bi-x-lg"></i></button></div>`;
+}
+function toggleShopSelect(id){
+  if(shopSelected.has(id))shopSelected.delete(id);else shopSelected.add(id);
+  renderShop();
+}
 function toggleShop(id){const it=S.shopping.find(x=>String(x.id)===String(id));if(it)it.checked=!it.checked;renderShop();saveData();}
+function toggleShopSelect(id){if(shopSelected.has(id))shopSelected.delete(id);else shopSelected.add(id);renderShop();}
+function toggleShopSelectMode(){shopSelectMode=!shopSelectMode;shopSelected.clear();renderShop();}
+function shopSelectAll(){S.shopping.forEach(it=>shopSelected.add(String(it.id)));renderShop();}
+function deleteSelected(){if(shopSelected.size===0)return;if(!confirm(shopSelected.size+'件を削除しますか？'))return;S.shopping=S.shopping.filter(x=>!shopSelected.has(String(x.id)));shopSelected.clear();shopSelectMode=false;renderShop();saveData();}
 function rmShop(id){S.shopping=S.shopping.filter(x=>String(x.id)!==String(id));renderShop();saveData();}
 function clearChk(){S.shopping=S.shopping.filter(x=>!x.checked);renderShop();saveData();}
 function addManual(){showSheet(`<h3>食材を追加</h3><div><label>食材名</label><input type="text" id="sh-n" placeholder="例: 豆腐、パスタ"></div><div><label>数量・単位（任意）</label><input type="text" id="sh-q" placeholder="例: 1丁、200g"></div><div class="sf"><button class="btn" onclick="closeSheet()">キャンセル</button><button class="btn p" onclick="saveMnl()"><i class="bi bi-plus-lg"></i>追加</button></div>`);setTimeout(()=>document.getElementById('sh-n').focus(),50);}
