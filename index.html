@@ -691,6 +691,16 @@ function toggleShopSelect(id){
   if(shopSelected.has(id))shopSelected.delete(id);else shopSelected.add(id);
   renderShop();
 }
+function updateShopToolbar(){
+  const bar=document.getElementById('shop-toolbar');
+  if(!bar)return;
+  if(shopSelectMode){
+    const n=shopSelected.size;
+    bar.innerHTML=`<button class="btn s" onclick="toggleShopSelectMode()"><i class="bi bi-x-lg"></i>キャンセル</button><span style="flex:1;font-size:12px;color:#666;text-align:center">${n}件選択中</span><button class="btn s" onclick="shopSelectAll()" style="margin-right:4px"><i class="bi bi-check-all"></i>全選択</button><button class="btn s d" onclick="deleteSelected()" ${n===0?'disabled':''}><i class="bi bi-trash"></i>削除</button>`;
+  } else {
+    bar.innerHTML=S.shopping.length>0?`<button class="btn s" onclick="toggleShopSelectMode()" style="margin-left:auto"><i class="bi bi-check2-square"></i>選択削除</button>`:'';
+  }
+}
 function toggleShop(id){const it=S.shopping.find(x=>String(x.id)===String(id));if(it)it.checked=!it.checked;renderShop();saveData();}
 function toggleShopSelect(id){if(shopSelected.has(id))shopSelected.delete(id);else shopSelected.add(id);renderShop();}
 function toggleShopSelectMode(){shopSelectMode=!shopSelectMode;shopSelected.clear();renderShop();}
