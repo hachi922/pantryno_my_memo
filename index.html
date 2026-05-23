@@ -178,6 +178,16 @@ body{display:flex;justify-content:center;align-items:flex-start;min-height:100vh
 .menu-plan-chevron.open{transform:rotate(90deg)}
 .steps-compact{font-size:12px;color:#555;line-height:1.7}
 .steps-compact .step{display:flex;gap:6px;margin-bottom:3px}
+.sbox-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent}
+.sbox-toggle h5{margin-bottom:0;pointer-events:none}
+.sbox-toggle i{font-size:13px;color:#bbb;transition:transform .2s;flex-shrink:0}
+.sbox-toggle i.open{transform:rotate(90deg)}
+.sbox-body{margin-top:6px}
+.step-group-edit{background:#fafafa;border:0.5px solid #e0e0e0;border-radius:9px;padding:8px 10px;margin-bottom:5px}
+.step-group-label-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.step-group-label-row input{flex:1;height:28px;font-size:12px;padding:0 8px;border:.5px solid #ccc;border-radius:7px;background:#fff;color:#333}
+.step-group-block{background:#fff;border:0.5px solid #e8e8e8;border-radius:8px;padding:6px 10px;margin-bottom:6px}
+.step-group-block-title{font-size:11px;font-weight:600;color:var(--ac-dark);background:var(--ac-light);padding:2px 8px;border-radius:5px;display:inline-block;margin-bottom:6px}
 .step-n{width:18px;height:18px;border-radius:50%;background:var(--ac-mid);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;margin-top:2px}
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--ac-dark);color:#fff;padding:9px 18px;border-radius:22px;font-size:13px;z-index:300;white-space:nowrap;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.2)}
 @media(min-width:500px){.toast{position:absolute}}
@@ -274,7 +284,8 @@ let CFG={palette:0,fs:13,titleTx:'auto'};
 const folderOpen={};
 const invFolderOpen={};
 const menuOpen={};
-let shopSelectMode=false;  // 選択削除モード
+let shopSelectMode=false;
+const detailOpen={ing:true,step:true};  // 材料・作り方の折りたたみ状態  // 選択削除モード
 const shopSelected=new Set();  // 選択中のID  // 献立カードの開閉状態  // 在庫カテゴリの折りたたみ状態
 
 function loadData(){try{const r=localStorage.getItem(STORAGE_KEY);return r?JSON.parse(r):null;}catch{return null;}}
@@ -321,6 +332,13 @@ function applyFontSize(fs){
 }
 
 function fmtDate(s){if(!s)return'';const[y,m,d]=s.split('-');return`${y}/${m}/${d}`;}
+function normalizeStepGroups(raw){
+  // すでに新形式
+  if(Array.isArray(raw)&&raw.length>0&&typeof raw[0]==='object'&&'steps' in raw[0])return raw;
+  // 旧形式(文字列配列) → グループなし1グループに変換
+  if(Array.isArray(raw)&&(raw.length===0||typeof raw[0]==='string'))return [{label:'',steps:raw}];
+  return [{label:'',steps:[]}];
+}
 function parseQty(s){if(!s)return{num:null,unit:''};const m=s.match(/^([\d.]+)\s*(.*)$/);if(!m)return{num:null,unit:s.trim()};return{num:parseFloat(m[1]),unit:m[2].trim()};}
 function sameUnit(a,b){const n=s=>s.replace(/個|ケ|ヶ/g,'個').replace(/本|束/g,'本').trim();return n(a)===n(b);}
 
@@ -532,6 +550,19 @@ function renderRec(){
   document.getElementById('rec-c').innerHTML=html;
 }
 
+function renderStepGroups(r){
+  const groups=r.stepGroups||normalizeStepGroups(r.steps||[]);
+  let html='';let globalN=1;
+  groups.forEach(grp=>{
+    const hasLabel=grp.label&&grp.label.trim();
+    if(hasLabel)html+=`<div style="margin-bottom:6px"><div class="ing-group-label">${grp.label}</div><div style="padding-left:10px;border-left:2px solid var(--ac-light)">`;
+    (grp.steps||[]).forEach(s=>{
+      html+=`<div style="display:flex;gap:8px;font-size:13px;line-height:1.5;padding:4px 0;border-bottom:.5px solid #f0f0f0;color:#333"><span class="snum">${globalN++}</span><span>${s}</span></div>`;
+    });
+    if(hasLabel)html+=`</div></div>`;
+  });
+  return html;
+}
 function renderIngGroups(r,inv){
   let html='';
   r.ingGroups.forEach(grp=>{
@@ -560,15 +591,34 @@ function openDetail(id){
   document.getElementById('det-edit').onclick=()=>openRecSheet(id);
   document.getElementById('det-del').onclick=()=>{if(confirm('削除しますか？')){S.recipes=S.recipes.filter(x=>x.id!==id);S.selectedRecs.delete(id);closeDetail();saveData();}};
   const ingHtml=renderIngGroups(r,S.inventory);
-  const steps=r.steps.map((s,i)=>`<div style="display:flex;gap:8px;font-size:13px;line-height:1.5;padding:4px 0;border-bottom:.5px solid #f0f0f0;color:#333"><span class="snum">${i+1}</span><span>${s}</span></div>`).join('');
+  const steps=renderStepGroups(r);
   document.getElementById('rec-dc').innerHTML=`
     <div style="margin-bottom:8px">
       <div style="font-size:19px;font-weight:500;margin-bottom:2px;color:#333">${r.name}</div>
       <div style="font-size:12px;color:#aaa;margin-bottom:4px">${S.recCats[r.ci]||''}${r.sv?' · '+r.sv:''}</div>
       ${urlHtml(r)}
     </div>
-    <div class="sbox"><h5>材料</h5>${ingHtml}</div>
-    <div class="sbox"><h5>作り方</h5>${steps}</div>`;
+    <div class="sbox">
+      <button class="sbox-toggle" onclick="toggleDetailSection('ing')">
+        <h5>材料</h5>
+        <i class="bi bi-chevron-right ${detailOpen.ing?'open':''}"></i>
+      </button>
+      <div class="sbox-body" id="detail-ing" style="display:${detailOpen.ing?'block':'none'}">${ingHtml}</div>
+    </div>
+    <div class="sbox">
+      <button class="sbox-toggle" onclick="toggleDetailSection('step')">
+        <h5>作り方</h5>
+        <i class="bi bi-chevron-right ${detailOpen.step?'open':''}"></i>
+      </button>
+      <div class="sbox-body" id="detail-step" style="display:${detailOpen.step?'block':'none'}">${steps}</div>
+    </div>`;
+}
+function toggleDetailSection(key){
+  detailOpen[key]=!detailOpen[key];
+  const body=document.getElementById('detail-'+key);
+  const icon=body?body.previousElementSibling.querySelector('i'):null;
+  if(body)body.style.display=detailOpen[key]?'block':'none';
+  if(icon){if(detailOpen[key])icon.classList.add('open');else icon.classList.remove('open');}
 }
 function closeDetail(){
   S.curRec=null;
@@ -585,7 +635,8 @@ function openRecSheet(id,defaultCi){
   const opts=S.recCats.map((c,i)=>`<option value="${i}"${r?r.ci===i?' selected':'':i===(defaultCi||0)?' selected':''}>${c}</option>`).join('');
   const initGroups=r?r.ingGroups:[{label:'',ings:[{name:'',qty:''}]}];
   function buildGroupHtml(groups){return groups.map((grp,gi)=>{const iRows=grp.ings.map((ig,ii)=>`<div class="ier" id="ir${gi}_${ii}"><input type="text" placeholder="食材名" value="${ig.name}" id="in${gi}_${ii}" style="flex:2"><input type="text" placeholder="分量" value="${ig.qty}" id="iq${gi}_${ii}" style="flex:1"><button onclick="rmIngRow(${gi},${ii})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button></div>`).join('');return`<div class="ing-group-edit" id="grp${gi}"><div class="ing-group-edit-header"><input type="text" placeholder="グループ名（例: タレ）省略可" value="${grp.label}" id="gl${gi}"><button onclick="rmGroup(${gi})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button></div><div id="ings${gi}">${iRows}</div><button class="btn s" style="margin-top:4px" onclick="addIngRow(${gi})"><i class="bi bi-plus-lg"></i>食材追加</button></div>`;}).join('');}
-  const sRows=(r?r.steps:['','']).map((s,i)=>`<div class="ser" id="sr${i}"><span class="snum">${i+1}</span><textarea id="ss${i}">${s}</textarea><button onclick="document.getElementById('sr${i}').remove()" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0;margin-top:4px">×</button></div>`).join('');
+  const initStepGroups=r?normalizeStepGroups(r.stepGroups||r.steps||[]):[{label:'',steps:['','']}];
+  function buildStepGroupHtml(groups){return groups.map((grp,gi)=>{const sRows=(grp.steps||['']).map((s,si)=>`<div class="ser" id="sgr${gi}_s${si}"><span class="snum" id="sgn${gi}_${si}">?</span><textarea id="sgs${gi}_${si}">${s}</textarea><button onclick="rmStepRow(${gi},${si})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0;margin-top:4px">×</button></div>`).join('');return`<div class="step-group-edit" id="sgrp${gi}"><div class="step-group-label-row"><input type="text" placeholder="グループ名（例: 下準備）省略可" value="${grp.label||''}" id="sgl${gi}"><button onclick="rmStepGroup(${gi})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button></div><div id="sged${gi}">${sRows}</div><button class="btn s" style="margin-top:4px" onclick="addStepRow(${gi})"><i class="bi bi-plus-lg"></i>手順追加</button></div>`;}).join('');} 
   showSheet(`<h3>${r?'レシピを編集':'レシピを追加'}</h3>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
       <div style="grid-column:1/-1"><label>レシピ名</label><input type="text" id="rn" value="${r?r.name:''}"></div>
@@ -594,7 +645,7 @@ function openRecSheet(id,defaultCi){
       <div style="grid-column:1/-1"><label>参考URL（任意）</label><input type="url" id="rurl" placeholder="https://..." value="${r?r.url||'':''}"></div>
     </div>
     <div><label>材料</label><div id="grp-editor" style="display:flex;flex-direction:column;gap:5px">${buildGroupHtml(initGroups)}</div><button class="btn s" style="margin-top:6px" onclick="addGroup()"><i class="bi bi-folder-plus"></i>グループを追加</button></div>
-    <div><label>作り方</label><div id="step-ed">${sRows}</div><button class="btn s" style="margin-top:5px" onclick="addSRow()"><i class="bi bi-plus-lg"></i>追加</button></div>
+    <div><label>作り方</label><div id="step-grp-ed" style="display:flex;flex-direction:column;gap:5px">${buildStepGroupHtml(initStepGroups)}</div><button class="btn s" style="margin-top:6px" onclick="addStepGroup()"><i class="bi bi-folder-plus"></i>グループを追加</button></div>
     <div class="sf"><button class="btn" onclick="closeSheet()">キャンセル</button><button class="btn p" onclick="saveRec(${id||0})">保存</button></div>`);
   setTimeout(()=>document.getElementById('rn').focus(),50);
 }
@@ -602,7 +653,22 @@ function addGroup(){const ed=document.getElementById('grp-editor');const gi=ed.q
 function rmGroup(gi){const el=document.getElementById('grp'+gi);if(el)el.remove();}
 function addIngRow(gi){const cont=document.getElementById('ings'+gi);if(!cont)return;const ii=cont.querySelectorAll('.ier').length;const d=document.createElement('div');d.className='ier';d.id=`ir${gi}_${ii}`;d.innerHTML=`<input type="text" placeholder="食材名" id="in${gi}_${ii}" style="flex:2"><input type="text" placeholder="分量" id="iq${gi}_${ii}" style="flex:1"><button onclick="rmIngRow(${gi},${ii})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button>`;cont.appendChild(d);}
 function rmIngRow(gi,ii){const el=document.getElementById(`ir${gi}_${ii}`);if(el)el.remove();}
-function addSRow(){const ed=document.getElementById('step-ed');const i=ed.querySelectorAll('[id^=sr]').length;const d=document.createElement('div');d.className='ser';d.id='sr'+i;d.innerHTML=`<span class="snum">${i+1}</span><textarea id="ss${i}" placeholder="手順..."></textarea><button onclick="this.parentNode.remove()" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0;margin-top:4px">×</button>`;ed.appendChild(d);}
+function addStepGroup(){
+  const ed=document.getElementById('step-grp-ed');
+  const gi=ed.querySelectorAll('.step-group-edit').length;
+  const d=document.createElement('div');d.className='step-group-edit';d.id='sgrp'+gi;
+  d.innerHTML=`<div class="step-group-label-row"><input type="text" placeholder="グループ名（例: 下準備）省略可" id="sgl${gi}"><button onclick="rmStepGroup(${gi})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button></div><div id="sged${gi}"><div class="ser" id="sgr${gi}_s0"><span class="snum">?</span><textarea id="sgs${gi}_0" placeholder="手順..."></textarea><button onclick="rmStepRow(${gi},0)" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0;margin-top:4px">×</button></div></div><button class="btn s" style="margin-top:4px" onclick="addStepRow(${gi})"><i class="bi bi-plus-lg"></i>手順追加</button>`;
+  ed.appendChild(d);
+}
+function rmStepGroup(gi){const el=document.getElementById('sgrp'+gi);if(el)el.remove();}
+function addStepRow(gi){
+  const cont=document.getElementById('sged'+gi);if(!cont)return;
+  const si=cont.querySelectorAll('.ser').length;
+  const d=document.createElement('div');d.className='ser';d.id=`sgr${gi}_s${si}`;
+  d.innerHTML=`<span class="snum">?</span><textarea id="sgs${gi}_${si}" placeholder="手順..."></textarea><button onclick="rmStepRow(${gi},${si})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0;margin-top:4px">×</button>`;
+  cont.appendChild(d);
+}
+function rmStepRow(gi,si){const el=document.getElementById(`sgr${gi}_s${si}`);if(el)el.remove();}
 function saveRec(id){
   const name=document.getElementById('rn').value.trim();if(!name)return alert('レシピ名を入力してください');
   const ci=parseInt(document.getElementById('rci').value);
@@ -621,10 +687,21 @@ function saveRec(id){
     if(ings.length)ingGroups.push({label,ings});
   });
   if(!ingGroups.length)ingGroups.push({label:'',ings:[]});
-  const steps=[];
-  document.querySelectorAll('[id^=sr]').forEach(row=>{const x=row.id.slice(2);const el=document.getElementById('ss'+x);if(el&&el.value.trim())steps.push(el.value.trim());});
-  if(id){const r=S.recipes.find(x=>x.id===id);Object.assign(r,{name,ci,sv,url,ingGroups,steps});}
-  else{S.recipes.push({id:S.nrid++,name,ci,sv,url,ingGroups,steps});folderOpen[ci]=true;}
+  const stepGroups=[];
+  document.querySelectorAll('.step-group-edit').forEach(grpEl=>{
+    const gi=grpEl.id.replace('sgrp','');
+    const label=(document.getElementById('sgl'+gi)||{}).value||'';
+    const steps=[];
+    grpEl.querySelectorAll('.ser').forEach(row=>{
+      const si=row.id.split('_s')[1];
+      const el=document.getElementById(`sgs${gi}_${si}`);
+      if(el&&el.value.trim())steps.push(el.value.trim());
+    });
+    if(steps.length)stepGroups.push({label:label.trim(),steps});
+  });
+  if(!stepGroups.length)stepGroups.push({label:'',steps:[]});
+  if(id){const r=S.recipes.find(x=>x.id===id);Object.assign(r,{name,ci,sv,url,ingGroups,stepGroups});delete r.steps;}
+  else{S.recipes.push({id:S.nrid++,name,ci,sv,url,ingGroups,stepGroups});folderOpen[ci]=true;}
   closeSheet();
   if(S.curRec===id&&id)openDetail(id);else closeDetail();
   saveData();
@@ -642,7 +719,8 @@ function renderMenu(){
     if(menuOpen[rid]===undefined)menuOpen[rid]=true;
     const isOpen=menuOpen[rid];
     const ingHtml=renderIngGroups(r,S.inventory);
-    const steps=r.steps.map((s,i)=>`<div class="step"><span class="step-n">${i+1}</span><span>${s}</span></div>`).join('');
+    const groups=r.stepGroups||normalizeStepGroups(r.steps||[]);let gn=1;
+    const steps=groups.map(grp=>{const hasLabel=grp.label&&grp.label.trim();let h='';if(hasLabel)h+=`<div style="font-size:11px;font-weight:600;color:var(--ac-dark);background:var(--ac-light);padding:1px 8px;border-radius:5px;display:inline-block;margin-bottom:4px">${grp.label}</div><div style="padding-left:8px;border-left:2px solid var(--ac-light)">`;(grp.steps||[]).forEach(s=>{h+=`<div class="step"><span class="step-n">${gn++}</span><span>${s}</span></div>`;});if(hasLabel)h+='</div>';return h;}).join('');
     const missCount=missingCount(r);
     html+=`<div class="menu-plan-card">
       <div class="menu-plan-header fhc" onclick="toggleMenuCard(${rid})">
@@ -747,7 +825,7 @@ function setCfgPalette(i){CFG.palette=i;applyTheme();document.querySelectorAll('
 function setCfgTitleTx(v){CFG.titleTx=v;applyTheme();document.querySelectorAll('.seg-btn').forEach(btn=>{const t=btn.textContent.trim();btn.classList.toggle('on',(v==='auto'&&t==='自動')||(v==='white'&&t==='白')||(v==='black'&&t==='黒'));});saveData();}
 function setCfgFs(v){CFG.fs=parseInt(v);applyFontSize(CFG.fs);const p=document.getElementById('cfg-fs-prev');if(p)p.textContent=CFG.fs+'px';saveData();}
 function doExport(){const data=JSON.stringify({invCats:S.invCats,recCats:S.recCats,inventory:S.inventory,recipes:S.recipes,shopping:S.shopping,cfg:CFG},null,2);const blob=new Blob([data],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;const d=new Date();a.download=`Pantryno_backup_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;a.click();URL.revokeObjectURL(url);toast('エクスポートしました');}
-function doImport(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.invCats)S.invCats=d.invCats;if(d.recCats)S.recCats=d.recCats;if(d.inventory)S.inventory=d.inventory;if(d.recipes){S.recipes=d.recipes;S.recipes.forEach(r=>{if(r.ings&&!r.ingGroups){r.ingGroups=[{label:'',ings:r.ings}];delete r.ings;}});}if(d.shopping)S.shopping=d.shopping;if(d.cfg){Object.assign(CFG,d.cfg);applyTheme();}S.recCats.forEach((_,i)=>folderOpen[i]=false);S.nid=Math.max(20,...S.inventory.map(x=>x.id||0))+1;S.nrid=Math.max(10,...S.recipes.map(x=>x.id||0))+1;saveData();closeSheet();renderInv();renderRec();renderShop();updateBadge();toast('インポートしました');}catch{alert('ファイルの形式が正しくありません');}};reader.readAsText(file);e.target.value='';}
+function doImport(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.invCats)S.invCats=d.invCats;if(d.recCats)S.recCats=d.recCats;if(d.inventory)S.inventory=d.inventory;if(d.recipes){S.recipes=d.recipes;S.recipes.forEach(r=>{if(r.ings&&!r.ingGroups){r.ingGroups=[{label:'',ings:r.ings}];delete r.ings;}r.stepGroups=normalizeStepGroups(r.stepGroups||r.steps||[]);delete r.steps;});}if(d.shopping)S.shopping=d.shopping;if(d.cfg){Object.assign(CFG,d.cfg);applyTheme();}S.recCats.forEach((_,i)=>folderOpen[i]=false);S.nid=Math.max(20,...S.inventory.map(x=>x.id||0))+1;S.nrid=Math.max(10,...S.recipes.map(x=>x.id||0))+1;saveData();closeSheet();renderInv();renderRec();renderShop();updateBadge();toast('インポートしました');}catch{alert('ファイルの形式が正しくありません');}};reader.readAsText(file);e.target.value='';}
 function openHelp(){
   showSheet(`<h3><i class="bi bi-question-circle" style="margin-right:6px"></i>使い方</h3>
 
