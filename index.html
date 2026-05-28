@@ -104,7 +104,8 @@ function _fbInit(){
     _loadFromFirestore(user);
   });
 }
-window.addEventListener('load', _fbInit);
+// DOMContentLoaded後に呼び出す（body末尾のscriptから呼ばれる）
+window._fbInitReady=true;
 </script>
 <meta name="theme-color" content="#E8A0A0">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -1008,6 +1009,10 @@ function closeSheet(){document.getElementById('mw').style.display='none';}
 function closeMW(e){if(e.target===document.getElementById('mw'))closeSheet();}
 
 applyTheme();renderInv();renderRec();renderShop();updateBadge();
+</script>
+<script>
+// Firebase初期化（DOM構築後）
+if(window._fbInitReady)_fbInit();
 </script>
 <script>
 if('serviceWorker' in navigator){
