@@ -9,11 +9,10 @@
 <title>Pantryno</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="manifest" href="manifest.json">
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script>
 const firebaseConfig = {
   apiKey: "AIzaSyAum5GxFtfiSBmmLqQRWusCJxZKzvmW0ow",
   authDomain: "panyryno.firebaseapp.com",
@@ -22,58 +21,55 @@ const firebaseConfig = {
   messagingSenderId: "678099181033",
   appId: "1:678099181033:web:0b84a8dd7dea39ee603f78"
 };
+firebase.initializeApp(firebaseConfig);
+const _db = firebase.firestore();
+const _auth = firebase.auth();
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-
-// 匿名認証でログイン
-signInAnonymously(auth).catch(e=>console.warn('Auth error:',e));
-
-// ユーザーIDが確定したらFirestoreと同期
-onAuthStateChanged(auth, user => {
-  if(!user)return;
-  const uid = user.uid;
-  window._fbUid = uid;
-
-  // Firestoreからデータを読み込む
-  const ref = doc(db, 'users', uid, 'data', 'main');
-  getDoc(ref).then(snap => {
-    if(snap.exists()){
-      const d = snap.data();
-      if(d.invCats) S.invCats=d.invCats;
-      if(d.recCats) S.recCats=d.recCats;
-      if(d.inventory) S.inventory=d.inventory;
-      if(d.recipes){
-        S.recipes=d.recipes;
-        S.recipes.forEach(r=>{
-          if(r.ings&&!r.ingGroups){r.ingGroups=[{label:'',ings:r.ings}];delete r.ings;}
-          r.stepGroups=normalizeStepGroups(r.stepGroups||r.steps||[]);
-          delete r.steps;
-        });
+function _fbInit(){
+  _auth.signInAnonymously().catch(e=>console.warn('Auth error:',e));
+  _auth.onAuthStateChanged(user=>{
+    if(!user)return;
+    window._fbUid=user.uid;
+    console.log('Firebase UID:', user.uid);
+    const ref=_db.collection('users').doc(user.uid).collection('data').doc('main');
+    ref.get().then(snap=>{
+      if(snap.exists){
+        const d=snap.data();
+        if(d.invCats)S.invCats=d.invCats;
+        if(d.recCats)S.recCats=d.recCats;
+        if(d.inventory)S.inventory=d.inventory;
+        if(d.recipes){
+          S.recipes=d.recipes;
+          S.recipes.forEach(r=>{
+            if(r.ings&&!r.ingGroups){r.ingGroups=[{label:'',ings:r.ings}];delete r.ings;}
+            r.stepGroups=normalizeStepGroups(r.stepGroups||r.steps||[]);
+            delete r.steps;
+          });
+        }
+        if(d.shopping)S.shopping=d.shopping;
+        if(d.cfg)Object.assign(CFG,d.cfg);
+        S.nid=Math.max(20,...S.inventory.map(x=>x.id||0))+1;
+        S.nrid=Math.max(10,...S.recipes.map(x=>x.id||0))+1;
+        S.recCats.forEach((_,i)=>folderOpen[i]=false);
+        S.invCats.forEach((_,i)=>invFolderOpen[i]=true);
+        applyTheme();renderInv();renderRec();renderShop();renderMenu();updateBadge();
+        toast('クラウドからデータを読み込みました');
+      } else {
+        console.log('Firestoreにデータなし（初回）');
       }
-      if(d.shopping) S.shopping=d.shopping;
-      if(d.cfg) Object.assign(CFG,d.cfg);
-      S.nid=Math.max(20,...S.inventory.map(x=>x.id||0))+1;
-      S.nrid=Math.max(10,...S.recipes.map(x=>x.id||0))+1;
-      S.recCats.forEach((_,i)=>folderOpen[i]=false);
-      S.invCats.forEach((_,i)=>invFolderOpen[i]=true);
-      applyTheme();renderInv();renderRec();renderShop();renderMenu();updateBadge();
-      toast('クラウドからデータを読み込みました');
-    }
-  }).catch(e=>console.warn('Firestore read error:',e));
-});
-
-// Firestoreにデータを保存
-window._fbSave = function(){
-  if(!window._fbUid)return;
-  const ref = doc(db, 'users', window._fbUid, 'data', 'main');
-  setDoc(ref, {
-    invCats:S.invCats, recCats:S.recCats,
-    inventory:S.inventory, recipes:S.recipes,
-    shopping:S.shopping, cfg:CFG
-  }).catch(e=>console.warn('Firestore write error:',e));
-};
+    }).catch(e=>console.warn('Firestore read error:',e));
+  });
+  window._fbSave=function(){
+    if(!window._fbUid)return;
+    const ref=_db.collection('users').doc(window._fbUid).collection('data').doc('main');
+    ref.set({
+      invCats:S.invCats,recCats:S.recCats,
+      inventory:S.inventory,recipes:S.recipes,
+      shopping:S.shopping,cfg:CFG
+    }).then(()=>console.log('Firestore saved')).catch(e=>console.warn('Firestore write error:',e));
+  };
+}
+window.addEventListener('load', _fbInit);
 </script>
 <meta name="theme-color" content="#E8A0A0">
 <link rel="apple-touch-icon" href="icon-192.png">
