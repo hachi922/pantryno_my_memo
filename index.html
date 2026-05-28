@@ -25,40 +25,36 @@ firebase.initializeApp(firebaseConfig);
 const _db = firebase.firestore();
 const _auth = firebase.auth();
 
-function _fbInit(){
-  _auth.signInAnonymously().catch(e=>console.warn('Auth error:',e));
-  _auth.onAuthStateChanged(user=>{
-    if(!user)return;
-    window._fbUid=user.uid;
-    console.log('Firebase UID:', user.uid);
-    const ref=_db.collection('users').doc(user.uid).collection('data').doc('main');
-    ref.get().then(snap=>{
-      if(snap.exists){
-        const d=snap.data();
-        if(d.invCats)S.invCats=d.invCats;
-        if(d.recCats)S.recCats=d.recCats;
-        if(d.inventory)S.inventory=d.inventory;
-        if(d.recipes){
-          S.recipes=d.recipes;
-          S.recipes.forEach(r=>{
-            if(r.ings&&!r.ingGroups){r.ingGroups=[{label:'',ings:r.ings}];delete r.ings;}
-            r.stepGroups=normalizeStepGroups(r.stepGroups||r.steps||[]);
-            delete r.steps;
-          });
-        }
-        if(d.shopping)S.shopping=d.shopping;
-        if(d.cfg)Object.assign(CFG,d.cfg);
-        S.nid=Math.max(20,...S.inventory.map(x=>x.id||0))+1;
-        S.nrid=Math.max(10,...S.recipes.map(x=>x.id||0))+1;
-        S.recCats.forEach((_,i)=>folderOpen[i]=false);
-        S.invCats.forEach((_,i)=>invFolderOpen[i]=true);
-        applyTheme();renderInv();renderRec();renderShop();renderMenu();updateBadge();
-        toast('クラウドからデータを読み込みました');
-      } else {
-        console.log('Firestoreにデータなし（初回）');
+function _loadFromFirestore(user){
+  window._fbUid = user.uid;
+  const ref = _db.collection('users').doc(user.uid).collection('data').doc('main');
+  ref.get().then(snap=>{
+    if(snap.exists){
+      const d=snap.data();
+      if(d.invCats)S.invCats=d.invCats;
+      if(d.recCats)S.recCats=d.recCats;
+      if(d.inventory)S.inventory=d.inventory;
+      if(d.recipes){
+        S.recipes=d.recipes;
+        S.recipes.forEach(r=>{
+          if(r.ings&&!r.ingGroups){r.ingGroups=[{label:'',ings:r.ings}];delete r.ings;}
+          r.stepGroups=normalizeStepGroups(r.stepGroups||r.steps||[]);
+          delete r.steps;
+        });
       }
-    }).catch(e=>console.warn('Firestore read error:',e));
-  });
+      if(d.shopping)S.shopping=d.shopping;
+      if(d.cfg)Object.assign(CFG,d.cfg);
+      S.nid=Math.max(20,...S.inventory.map(x=>x.id||0))+1;
+      S.nrid=Math.max(10,...S.recipes.map(x=>x.id||0))+1;
+      S.recCats.forEach((_,i)=>folderOpen[i]=false);
+      S.invCats.forEach((_,i)=>invFolderOpen[i]=true);
+      applyTheme();renderInv();renderRec();renderShop();renderMenu();updateBadge();
+      toast('クラウドからデータを読み込みました');
+    } else {
+      toast('初回ログイン：データを保存します');
+      if(window._fbSave)window._fbSave();
+    }
+  }).catch(e=>console.warn('Firestore read error:',e));
   window._fbSave=function(){
     if(!window._fbUid)return;
     const ref=_db.collection('users').doc(window._fbUid).collection('data').doc('main');
@@ -66,8 +62,47 @@ function _fbInit(){
       invCats:S.invCats,recCats:S.recCats,
       inventory:S.inventory,recipes:S.recipes,
       shopping:S.shopping,cfg:CFG
-    }).then(()=>console.log('Firestore saved')).catch(e=>console.warn('Firestore write error:',e));
+    }).catch(e=>console.warn('Firestore write error:',e));
   };
+}
+
+function _fbInit(){
+  // ログインUIをトップバーに追加
+  const loginBtn=document.createElement('button');
+  loginBtn.className='ib';
+  loginBtn.id='login-btn';
+  loginBtn.title='Googleでログイン';
+  loginBtn.innerHTML='<i class="bi bi-person-circle"></i>';
+  loginBtn.onclick=()=>{
+    const user=_auth.currentUser;
+    if(user&&!user.isAnonymous){
+      if(confirm('ログアウトしますか？'))_auth.signOut();
+    } else {
+      const provider=new firebase.auth.GoogleAuthProvider();
+      _auth.signInWithPopup(provider).catch(e=>console.warn('Login error:',e));
+    }
+  };
+  document.querySelector('.topbar').appendChild(loginBtn);
+
+  _auth.onAuthStateChanged(user=>{
+    const btn=document.getElementById('login-btn');
+    if(!user){
+      if(btn)btn.innerHTML='<i class="bi bi-person-circle"></i>';
+      return;
+    }
+    if(user.isAnonymous){
+      if(btn)btn.innerHTML='<i class="bi bi-person-circle"></i>';
+      return;
+    }
+    // Googleログイン済み
+    if(btn){
+      btn.innerHTML=user.photoURL
+        ?`<img src="${user.photoURL}" style="width:22px;height:22px;border-radius:50%;object-fit:cover">`
+        :`<i class="bi bi-person-check"></i>`;
+      btn.title=user.displayName||'ログイン中';
+    }
+    _loadFromFirestore(user);
+  });
 }
 window.addEventListener('load', _fbInit);
 </script>
