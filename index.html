@@ -79,7 +79,9 @@ function _fbInit(){
       if(confirm('ログアウトしますか？'))_auth.signOut();
     } else {
       const provider=new firebase.auth.GoogleAuthProvider();
-      _auth.signInWithRedirect(provider).catch(e=>console.warn('Login error:',e));
+      _auth.signInWithPopup(provider)
+        .then(result=>{console.log('Popup login OK:', result.user.email);})
+        .catch(e=>console.warn('Login error:',e));
     }
   };
   document.querySelector('.topbar').appendChild(loginBtn);
