@@ -1,4 +1,4 @@
-const CACHE = 'pantryno-v1';
+const CACHE = 'pantryno-v2';
 const ASSETS = [
   './index.html',
   './manifest.json',
@@ -6,7 +6,6 @@ const ASSETS = [
   'https://fonts.googleapis.com/css2?family=Pacifico&display=swap'
 ];
 
-// インストール時にキャッシュ
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE).then(cache => {
@@ -16,7 +15,6 @@ self.addEventListener('install', e => {
   self.skipWaiting();
 });
 
-// 古いキャッシュを削除
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -26,13 +24,23 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
-// ネットワーク優先、失敗時にキャッシュにフォールバック
 self.addEventListener('fetch', e => {
+  const url = e.request.url;
+  // FirebaseやGoogleの通信はキャッシュしない
+  if(url.includes('firestore.googleapis.com') ||
+     url.includes('firebase') ||
+     url.includes('googleapis.com') ||
+     url.includes('gstatic.com/firebasejs') ||
+     url.includes('accounts.google.com') ||
+     e.request.method !== 'GET' ||
+     url.startsWith('chrome-extension')) {
+    return;
+  }
   e.respondWith(
     fetch(e.request)
       .then(res => {
         const clone = res.clone();
-        caches.open(CACHE).then(cache => cache.put(e.request, clone));
+        caches.open(CACHE).then(cache => cache.put(e.request, clone)).catch(()=>{});
         return res;
       })
       .catch(() => caches.match(e.request))
