@@ -43,6 +43,7 @@ function _loadFromFirestore(user){
         });
       }
       if(d.shopping)S.shopping=d.shopping;
+    if(d.waitingMenu)S.waitingMenu=d.waitingMenu;
       if(d.cfg)Object.assign(CFG,d.cfg);
       S.nid=Math.max(20,...S.inventory.map(x=>x.id||0))+1;
       S.nrid=Math.max(10,...S.recipes.map(x=>x.id||0))+1;
@@ -345,11 +346,21 @@ body{display:flex;justify-content:center;align-items:flex-start;min-height:100vh
   <div class="shr"><button class="shr-btn" onclick="shareToLine()" title="LINE"><i class="bi bi-chat-dots"></i></button><button class="shr-btn" onclick="copyList()" title="コピー"><i class="bi bi-clipboard"></i></button></div>
 </div>
 
+<div class="screen" id="screen-wait">
+  <div class="shop-topbar">
+    <span class="screen-label">献立待機</span>
+    <span class="shop-count" id="wait-count">リストは空です</span>
+    <button class="shop-add-btn" onclick="addWaitManual()"><i class="bi bi-plus-lg"></i>追加</button>
+  </div>
+  <div id="wait-toolbar" style="display:flex;align-items:center;gap:6px;padding:5px 12px;background:#fff;border-bottom:0.5px solid #e0e0e0;min-height:38px;flex-shrink:0"></div>
+  <div class="scroll" id="wait-c"></div>
+</div>
 <nav class="bottomnav">
   <button class="bnav active" id="bnav-inv" onclick="switchTab('inv')"><i class="bi bi-box-seam"></i><span>在庫</span></button>
   <button class="bnav" id="bnav-rec" onclick="switchTab('rec')"><i class="bi bi-journal-richtext"></i><span>レシピ</span></button>
   <button class="bnav" id="bnav-menu" onclick="switchTab('menu')"><i class="bi bi-egg-fried"></i><span>献立</span></button>
   <button class="bnav" id="bnav-shop" onclick="switchTab('shop')"><div class="bdg"><i class="bi bi-cart3"></i><span class="bdg-n" id="shop-bdg">0</span></div><span>買い物</span></button>
+  <button class="bnav" id="bnav-wait" onclick="switchTab('wait')"><i class="bi bi-calendar2-check"></i><span>献立待機</span></button>
 </nav>
 
 <div class="mw" id="mw" style="display:none" onclick="closeMW(event)"><div class="sheet" id="sheet" onclick="e=>e.stopPropagation()"></div></div>
@@ -399,7 +410,7 @@ function saveData(){
   try{
     localStorage.setItem(STORAGE_KEY,JSON.stringify({
       invCats:S.invCats,recCats:S.recCats,inventory:S.inventory,
-      recipes:S.recipes,shopping:S.shopping,cfg:CFG
+      recipes:S.recipes,shopping:S.shopping,waitingMenu:S.waitingMenu,cfg:CFG
     }));
   }catch(e){console.warn(e);}
   // Firestoreにも保存
@@ -455,7 +466,7 @@ const S={
   recCats:['和食','洋食','中華','麺類','スープ','デザート','その他'],
   inventory:[],
   recipes:[],
-  shopping:[],selectedRecs:new Set(),nid:1,nrid:1,tab:'inv',curRec:null
+  shopping:[],waitingMenu:[],selectedRecs:new Set(),nid:1,nrid:1,tab:'inv',curRec:null
 };
 
 (function init(){
@@ -469,6 +480,7 @@ const S={
       S.recipes.forEach(r=>{if(r.ings&&!r.ingGroups){r.ingGroups=[{label:'',ings:r.ings}];delete r.ings;}});
     }
     if(saved.shopping)S.shopping=saved.shopping;
+    if(saved.waitingMenu)S.waitingMenu=saved.waitingMenu;
     if(saved.cfg)Object.assign(CFG,saved.cfg);
     S.nid=Math.max(20,...S.inventory.map(x=>x.id||0))+1;
     S.nrid=Math.max(10,...S.recipes.map(x=>x.id||0))+1;
@@ -486,20 +498,21 @@ function updateShopCount(){const n=S.shopping.filter(x=>!x.checked).length;const
 
 function switchTab(t){
   S.tab=t;
-  ['inv','rec','menu','shop'].forEach(x=>{
+  ['inv','rec','menu','shop','wait'].forEach(x=>{
     const s=document.getElementById('screen-'+x);if(s)s.classList.toggle('active',x===t);
     const b=document.getElementById('bnav-'+x);if(b)b.classList.toggle('active',x===t);
   });
-  const titles={inv:'在庫管理',rec:'レシピ',menu:'献立',shop:'買い物リスト'};
+  const titles={inv:'在庫管理',rec:'レシピ',menu:'献立',shop:'買い物リスト',wait:'献立待機リスト'};
   document.getElementById('topbar-title').textContent=titles[t]||t;
 
-  const showTop=t!=='shop'&&t!=='menu';
+  const showTop=t!=='shop'&&t!=='menu'&&t!=='wait';
   document.getElementById('cat-btn').style.display=showTop?'flex':'none';
   document.getElementById('add-btn').style.display=showTop?'flex':'none';
   if(t==='inv')renderInv();
   if(t==='rec')renderRec();
   if(t==='menu')renderMenu();
   if(t==='shop')renderShop();
+  if(t==='wait')renderWait();
 }
 function handleAdd(){S.tab==='inv'?openItemSheet():openRecSheet();}
 function openCatManage(){catManageSheet(S.tab==='inv'?'inv':'rec');}
@@ -580,6 +593,7 @@ function recRowHtml(r){
       ${r.sv?`<div class="rec-row-sv">${r.sv}</div>`:''}
     </div>
     <button class="star-btn ${fav}" onclick="toggleRecFav(${r.id},event)" title="お気に入り">★</button>
+    <button class="icb" onclick="addToWaitList('${r.name}');event.stopPropagation()" title="献立待機リストへ追加" style="color:var(--ac-mid)"><i class="bi bi-calendar2-plus"></i></button>
     <div class="rec-row-acts">
       <button class="icb" onclick="openRecSheet(${r.id});event.stopPropagation()"><i class="bi bi-pencil"></i></button>
       <button class="icb del" onclick="if(confirm('削除しますか？')){S.recipes=S.recipes.filter(x=>x.id!==${r.id});S.selectedRecs.delete(${r.id});renderRec();saveData();}event.stopPropagation()"><i class="bi bi-trash"></i></button>
@@ -1006,6 +1020,71 @@ function doReset(){
   toast('リセットしました');
 }
 
+function addToWaitList(name){
+  if(S.waitingMenu.find(x=>x.name===name&&!x.checked)){toast('すでにリストにあります');return;}
+  S.waitingMenu.push({id:Date.now(),name,checked:false});
+  saveData();toast(`「${name}」を献立待機リストに追加しました`);
+}
+function addWaitManual(){
+  showSheet(`<h3>メニューを追加</h3>
+    <div><label>メニュー名</label><input type="text" id="wm-n" placeholder="例: カレー、肉じゃが"></div>
+    <div class="sf"><button class="btn" onclick="closeSheet()">キャンセル</button><button class="btn p" onclick="saveWaitManual()"><i class="bi bi-plus-lg"></i>追加</button></div>`);
+  setTimeout(()=>document.getElementById('wm-n').focus(),50);
+}
+function saveWaitManual(){
+  const n=document.getElementById('wm-n').value.trim();
+  if(!n)return alert('メニュー名を入力してください');
+  S.waitingMenu.push({id:Date.now(),name:n,checked:false});
+  closeSheet();renderWait();saveData();
+}
+function toggleWait(id){
+  const it=S.waitingMenu.find(x=>String(x.id)===String(id));
+  if(it)it.checked=!it.checked;
+  renderWait();saveData();
+}
+function rmWait(id){
+  S.waitingMenu=S.waitingMenu.filter(x=>String(x.id)!==String(id));
+  renderWait();saveData();
+}
+function clearCheckedWait(){
+  S.waitingMenu=S.waitingMenu.filter(x=>!x.checked);
+  renderWait();saveData();
+}
+function updateWaitCount(){
+  const n=S.waitingMenu.filter(x=>!x.checked).length;
+  const el=document.getElementById('wait-count');
+  if(el)el.textContent=n>0?`未完了 ${n}件`:'リストは空です';
+}
+function updateWaitToolbar(){
+  const bar=document.getElementById('wait-toolbar');
+  if(!bar)return;
+  bar.innerHTML=S.waitingMenu.length>0&&S.waitingMenu.some(x=>x.checked)
+    ?`<span style="flex:1"></span><button class="btn s d" onclick="clearCheckedWait()"><i class="bi bi-trash"></i>完了済みを削除</button>`
+    :'';
+}
+function renderWait(){
+  updateWaitCount();updateWaitToolbar();
+  const unc=S.waitingMenu.filter(x=>!x.checked);
+  const chk=S.waitingMenu.filter(x=>x.checked);
+  if(!S.waitingMenu.length){
+    document.getElementById('wait-c').innerHTML=`<div class="em"><i class="bi bi-calendar2-check"></i>献立待機リストは空です<div style="font-size:12px;color:#bbb;line-height:1.8;margin-top:10px;background:#fff;border-radius:10px;padding:10px 14px;text-align:left"><b style="color:#888">追加方法</b><br>① 上の「追加」ボタンでメニュー名を入力<br>② レシピタブの <i class="bi bi-calendar2-plus"></i> から追加</div></div>`;
+    return;
+  }
+  let h='<div style="padding-bottom:6px">';
+  if(unc.length){
+    h+=`<div class="cat-lbl">未完了 <span style="font-weight:400;color:#bbb">${unc.length}件</span></div>`;
+    unc.forEach(it=>h+=waitItemHtml(it));
+  }
+  if(chk.length){
+    h+=`<div class="cat-lbl" style="margin-top:8px">完了 <span style="font-weight:400;color:#bbb">${chk.length}件</span><button class="btn s d" style="margin-left:auto" onclick="clearCheckedWait()"><i class="bi bi-trash"></i>削除</button></div>`;
+    chk.forEach(it=>h+=waitItemHtml(it));
+  }
+  h+='</div>';
+  document.getElementById('wait-c').innerHTML=h;
+}
+function waitItemHtml(it){
+  return`<div class="si ${it.checked?'chk':''}"><input type="checkbox" ${it.checked?'checked':''} onchange="toggleWait('${it.id}')"><span class="si-name" style="flex:1">${it.name}</span><button class="icb del" onclick="rmWait('${it.id}')"><i class="bi bi-x-lg"></i></button></div>`;
+}
 function getListText(){const items=S.shopping.filter(x=>!x.checked);return items.length?'🛒 買い物リスト\n'+items.map(x=>`・${x.name}${x.qty?' ('+x.qty+')':''}`).join('\n'):null;}
 function shareToLine(){const t=getListText();if(!t)return alert('買い物リストが空です');window.open('https://line.me/R/msg/text/?'+encodeURIComponent(t),'_blank','noopener');}
 function addToReminders(){if(!S.shopping.filter(x=>!x.checked).length)return alert('買い物リストが空です');showSheet(`<h3>リマインダーに追加</h3><div class="notice">ブラウザの制限により直接追加はできません。</div><ol style="font-size:13px;line-height:2.2;padding-left:18px"><li>「コピーして閉じる」でリストをコピー</li><li>リマインダーアプリを開く</li><li>Siriに伝えるか手動でペースト</li></ol><div class="sf"><button class="btn" onclick="closeSheet()">閉じる</button><button class="btn p" onclick="copyList();closeSheet()"><i class="bi bi-clipboard"></i>コピーして閉じる</button></div>`);}
