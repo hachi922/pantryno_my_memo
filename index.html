@@ -356,7 +356,7 @@ body{display:flex;justify-content:center;align-items:flex-start;min-height:100vh
   <div class="scroll" id="wait-c"></div>
 </div>
 <nav class="bottomnav">
-  <button class="bnav active" id="bnav-inv" onclick="switchTab('inv')"><i class="bi bi-box-seam"></i><span>在庫</span></button>
+  <button class="bnav active" id="bnav-inv" onclick="switchTab('inv')" style="display:none"><i class="bi bi-box-seam"></i><span>在庫</span></button>
   <button class="bnav" id="bnav-rec" onclick="switchTab('rec')"><i class="bi bi-journal-richtext"></i><span>レシピ</span></button>
   <button class="bnav" id="bnav-menu" onclick="switchTab('menu')"><i class="bi bi-egg-fried"></i><span>献立</span></button>
   <button class="bnav" id="bnav-shop" onclick="switchTab('shop')"><div class="bdg"><i class="bi bi-cart3"></i><span class="bdg-n" id="shop-bdg">0</span></div><span>買い物</span></button>
@@ -466,7 +466,7 @@ const S={
   recCats:['和食','洋食','中華','麺類','スープ','デザート','その他'],
   inventory:[],
   recipes:[],
-  shopping:[],waitingMenu:[],selectedRecs:new Set(),nid:1,nrid:1,tab:'inv',curRec:null
+  shopping:[],waitingMenu:[],selectedRecs:new Set(),nid:1,nrid:1,tab:'rec',curRec:null
 };
 
 (function init(){
@@ -752,13 +752,107 @@ function closeDetail(){
   renderRec();
 }
 
+function ingGroupsToText(ingGroups){
+  // ingGroups → テキスト（グループラベル付き）
+  return (ingGroups||[]).map(grp=>{
+    const lines=(grp.ings||[]).map(ing=>ing.qty?`${ing.name} ${ing.qty}`:ing.name).join('\n');
+    return grp.label?`【${grp.label}】\n${lines}`:lines;
+  }).join('\n');
+}
+function stepGroupsToText(stepGroups){
+  // stepGroups → テキスト（グループラベル付き）
+  return (stepGroups||[]).map(grp=>{
+    const lines=(grp.steps||[]).join('\n');
+    return grp.label?`【${grp.label}】\n${lines}`:lines;
+  }).join('\n');
+}
+function textToIngGroups(text){
+  // テキスト → ingGroups形式に変換
+  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l);
+  const groups=[];
+  let current={label:'',ings:[]};
+  lines.forEach(line=>{
+    if(line.startsWith('【')&&line.endsWith('】')){
+      if(current.ings.length)groups.push(current);
+      current={label:line.slice(1,-1),ings:[]};
+    } else {
+      // 最後のスペースで名前と分量に分割
+      const sp=line.lastIndexOf(' ');
+      if(sp>0){
+        current.ings.push({name:line.slice(0,sp).trim(),qty:line.slice(sp+1).trim()});
+      } else {
+        current.ings.push({name:line,qty:''});
+      }
+    }
+  });
+  if(current.ings.length)groups.push(current);
+  return groups.length?groups:[{label:'',ings:[]}];
+}
+function textToStepGroups(text){
+  // テキスト → stepGroups形式に変換
+  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l);
+  const groups=[];
+  let current={label:'',steps:[]};
+  lines.forEach(line=>{
+    if(line.startsWith('【')&&line.endsWith('】')){
+      if(current.steps.length)groups.push(current);
+      current={label:line.slice(1,-1),steps:[]};
+    } else {
+      current.steps.push(line);
+    }
+  });
+  if(current.steps.length)groups.push(current);
+  return groups.length?groups:[{label:'',steps:[]}];
+}
 function openRecSheet(id,defaultCi){
   const r=id?S.recipes.find(x=>x.id===id):null;
   const opts=S.recCats.map((c,i)=>`<option value="${i}"${r?r.ci===i?' selected':'':i===(defaultCi||0)?' selected':''}>${c}</option>`).join('');
   const initGroups=r?r.ingGroups:[{label:'',ings:[{name:'',qty:''}]}];
   function buildGroupHtml(groups){return groups.map((grp,gi)=>{const iRows=grp.ings.map((ig,ii)=>`<div class="ier" id="ir${gi}_${ii}"><input type="text" placeholder="食材名" value="${ig.name}" id="in${gi}_${ii}" style="flex:2"><input type="text" placeholder="分量" value="${ig.qty}" id="iq${gi}_${ii}" style="flex:1"><button onclick="rmIngRow(${gi},${ii})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button></div>`).join('');return`<div class="ing-group-edit" id="grp${gi}"><div class="ing-group-edit-header"><input type="text" placeholder="グループ名（例: タレ）省略可" value="${grp.label}" id="gl${gi}"><button onclick="rmGroup(${gi})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button></div><div id="ings${gi}">${iRows}</div><button class="btn s" style="margin-top:4px" onclick="addIngRow(${gi})"><i class="bi bi-plus-lg"></i>食材追加</button></div>`;}).join('');}
-  const initStepGroups=r?normalizeStepGroups(r.stepGroups||r.steps||[]):[{label:'',steps:['','']}];
-  function buildStepGroupHtml(groups){return groups.map((grp,gi)=>{const sRows=(grp.steps||['']).map((s,si)=>`<div class="ser" id="sgr${gi}_s${si}"><span class="snum" id="sgn${gi}_${si}">?</span><textarea id="sgs${gi}_${si}">${s}</textarea><button onclick="rmStepRow(${gi},${si})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0;margin-top:4px">×</button></div>`).join('');return`<div class="step-group-edit" id="sgrp${gi}"><div class="step-group-label-row"><input type="text" placeholder="グループ名（例: 下準備）省略可" value="${grp.label||''}" id="sgl${gi}"><button onclick="rmStepGroup(${gi})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button></div><div id="sged${gi}">${sRows}</div><button class="btn s" style="margin-top:4px" onclick="addStepRow(${gi})"><i class="bi bi-plus-lg"></i>手順追加</button></div>`;}).join('');} 
+  const initIngText=r?ingGroupsToText(r.ingGroups):'';
+  const initStepText=r?stepGroupsToText(normalizeStepGroups(r.stepGroups||r.steps||[])):'';
+  const placeholder_ing=`例：
+玉ねぎ 1個
+にんじん 1本
+醤油 大さじ2
+
+グループを分ける場合：
+【タレ】
+醤油 大さじ2
+みりん 大さじ1`;
+  const placeholder_step=`例：
+野菜を一口大に切る
+肉を炒める
+野菜を加えて炒める
+
+グループを分ける場合：
+【下準備】
+野菜を切る
+【調理】
+炒める`;
+  
+  // 材料グループHTML生成
+  function buildIngGroupsHtml(groups){
+    return groups.map((grp,gi)=>`
+      <div class="ing-group-edit" id="rg_ing_${gi}">
+        <div class="ing-group-edit-header">
+          <input type="text" placeholder="グループ名（例: タレ）省略可" value="${grp.label||''}" id="rg_ing_lbl_${gi}">
+          <button onclick="rmIngGrp(${gi})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button>
+        </div>
+        <textarea id="rg_ing_txt_${gi}" style="width:100%;min-height:80px;font-size:12px;line-height:1.8;padding:6px 8px;border:.5px solid #ccc;border-radius:7px;background:#fafafa;color:#333;resize:vertical" placeholder="1行1品で入力&#10;例：&#10;玉ねぎ 1個&#10;にんじん 1本">${ingGroupsToText([grp])}</textarea>
+      </div>`).join('');
+  }
+  function buildStepGroupsHtml(groups){
+    return groups.map((grp,gi)=>`
+      <div class="step-group-edit" id="rg_step_${gi}">
+        <div class="step-group-label-row">
+          <input type="text" placeholder="グループ名（例: 下準備）省略可" value="${grp.label||''}" id="rg_step_lbl_${gi}">
+          <button onclick="rmStepGrp(${gi})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button>
+        </div>
+        <textarea id="rg_step_txt_${gi}" style="width:100%;min-height:80px;font-size:12px;line-height:1.8;padding:6px 8px;border:.5px solid #ccc;border-radius:7px;background:#fafafa;color:#333;resize:vertical" placeholder="1行1工程で入力&#10;例：&#10;野菜を切る&#10;肉を炒める">${stepGroupsToText([grp])}</textarea>
+      </div>`).join('');
+  }
+
   showSheet(`<h3>${r?'レシピを編集':'レシピを追加'}</h3>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
       <div style="grid-column:1/-1"><label>レシピ名</label><input type="text" id="rn" value="${r?r.name:''}"></div>
@@ -766,8 +860,16 @@ function openRecSheet(id,defaultCi){
       <div><label>人数</label><input type="text" id="rsv" placeholder="2人分" value="${r?r.sv:''}"></div>
       <div style="grid-column:1/-1"><label>参考URL（任意）</label><input type="url" id="rurl" placeholder="https://..." value="${r?r.url||'':''}"></div>
     </div>
-    <div><label>材料</label><div id="grp-editor" style="display:flex;flex-direction:column;gap:5px">${buildGroupHtml(initGroups)}</div><button class="btn s" style="margin-top:6px" onclick="addGroup()"><i class="bi bi-folder-plus"></i>グループを追加</button></div>
-    <div><label>作り方</label><div id="step-grp-ed" style="display:flex;flex-direction:column;gap:5px">${buildStepGroupHtml(initStepGroups)}</div><button class="btn s" style="margin-top:6px" onclick="addStepGroup()"><i class="bi bi-folder-plus"></i>グループを追加</button></div>
+    <div>
+      <label>材料</label>
+      <div id="ing-grp-ed" style="display:flex;flex-direction:column;gap:5px">${buildIngGroupsHtml(r?r.ingGroups:[{label:'',ings:[]}])}</div>
+      <button class="btn s" style="margin-top:6px" onclick="addIngGrp()"><i class="bi bi-folder-plus"></i>グループを追加</button>
+    </div>
+    <div>
+      <label>作り方</label>
+      <div id="step-grp-ed" style="display:flex;flex-direction:column;gap:5px">${buildStepGroupsHtml(r?normalizeStepGroups(r.stepGroups||r.steps||[]):[{label:'',steps:[]}])}</div>
+      <button class="btn s" style="margin-top:6px" onclick="addStepGrp()"><i class="bi bi-folder-plus"></i>グループを追加</button>
+    </div>
     <div class="sf"><button class="btn" onclick="closeSheet()">キャンセル</button><button class="btn p" onclick="saveRec(${id||0})">保存</button></div>`);
   setTimeout(()=>document.getElementById('rn').focus(),50);
 }
@@ -775,6 +877,22 @@ function addGroup(){const ed=document.getElementById('grp-editor');const gi=ed.q
 function rmGroup(gi){const el=document.getElementById('grp'+gi);if(el)el.remove();}
 function addIngRow(gi){const cont=document.getElementById('ings'+gi);if(!cont)return;const ii=cont.querySelectorAll('.ier').length;const d=document.createElement('div');d.className='ier';d.id=`ir${gi}_${ii}`;d.innerHTML=`<input type="text" placeholder="食材名" id="in${gi}_${ii}" style="flex:2"><input type="text" placeholder="分量" id="iq${gi}_${ii}" style="flex:1"><button onclick="rmIngRow(${gi},${ii})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button>`;cont.appendChild(d);}
 function rmIngRow(gi,ii){const el=document.getElementById(`ir${gi}_${ii}`);if(el)el.remove();}
+function addIngGrp(){
+  const ed=document.getElementById('ing-grp-ed');if(!ed)return;
+  const gi=ed.querySelectorAll('.ing-group-edit').length;
+  const d=document.createElement('div');d.className='ing-group-edit';d.id='rg_ing_'+gi;
+  d.innerHTML=`<div class="ing-group-edit-header"><input type="text" placeholder="グループ名（例: タレ）省略可" id="rg_ing_lbl_${gi}"><button onclick="rmIngGrp(${gi})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button></div><textarea id="rg_ing_txt_${gi}" style="width:100%;min-height:80px;font-size:12px;line-height:1.8;padding:6px 8px;border:.5px solid #ccc;border-radius:7px;background:#fafafa;color:#333;resize:vertical" placeholder="1行1品で入力"></textarea>`;
+  ed.appendChild(d);
+}
+function rmIngGrp(gi){const el=document.getElementById('rg_ing_'+gi);if(el)el.remove();}
+function addStepGrp(){
+  const ed=document.getElementById('step-grp-ed');if(!ed)return;
+  const gi=ed.querySelectorAll('.step-group-edit').length;
+  const d=document.createElement('div');d.className='step-group-edit';d.id='rg_step_'+gi;
+  d.innerHTML=`<div class="step-group-label-row"><input type="text" placeholder="グループ名（例: 下準備）省略可" id="rg_step_lbl_${gi}"><button onclick="rmStepGrp(${gi})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button></div><textarea id="rg_step_txt_${gi}" style="width:100%;min-height:80px;font-size:12px;line-height:1.8;padding:6px 8px;border:.5px solid #ccc;border-radius:7px;background:#fafafa;color:#333;resize:vertical" placeholder="1行1工程で入力"></textarea>`;
+  ed.appendChild(d);
+}
+function rmStepGrp(gi){const el=document.getElementById('rg_step_'+gi);if(el)el.remove();}
 function addStepGroup(){
   const ed=document.getElementById('step-grp-ed');
   const gi=ed.querySelectorAll('.step-group-edit').length;
@@ -797,28 +915,25 @@ function saveRec(id){
   const sv=document.getElementById('rsv').value.trim();
   const url=document.getElementById('rurl').value.trim();
   const ingGroups=[];
-  document.querySelectorAll('.ing-group-edit').forEach(grpEl=>{
-    const gi=grpEl.id.replace('grp','');
-    const label=((document.getElementById('gl'+gi)||{}).value||'').trim();
-    const ings=[];
-    grpEl.querySelectorAll('.ier').forEach(row=>{
-      const ii=row.id.split('_')[1];
-      const n=document.getElementById(`in${gi}_${ii}`);const q=document.getElementById(`iq${gi}_${ii}`);
-      if(n&&n.value.trim())ings.push({name:n.value.trim(),qty:q?q.value.trim():''});
+  document.querySelectorAll('[id^="rg_ing_"]').forEach(el=>{
+    const gi=el.id.replace('rg_ing_','');
+    if(isNaN(gi))return;
+    const label=(document.getElementById('rg_ing_lbl_'+gi)||{}).value||'';
+    const txt=(document.getElementById('rg_ing_txt_'+gi)||{}).value||'';
+    const ings=txt.split('\n').map(l=>l.trim()).filter(l=>l).map(line=>{
+      const sp=line.lastIndexOf(' ');
+      return sp>0?{name:line.slice(0,sp).trim(),qty:line.slice(sp+1).trim()}:{name:line,qty:''};
     });
-    if(ings.length)ingGroups.push({label,ings});
+    if(ings.length)ingGroups.push({label:label.trim(),ings});
   });
   if(!ingGroups.length)ingGroups.push({label:'',ings:[]});
   const stepGroups=[];
-  document.querySelectorAll('.step-group-edit').forEach(grpEl=>{
-    const gi=grpEl.id.replace('sgrp','');
-    const label=(document.getElementById('sgl'+gi)||{}).value||'';
-    const steps=[];
-    grpEl.querySelectorAll('.ser').forEach(row=>{
-      const si=row.id.split('_s')[1];
-      const el=document.getElementById(`sgs${gi}_${si}`);
-      if(el&&el.value.trim())steps.push(el.value.trim());
-    });
+  document.querySelectorAll('[id^="rg_step_"]').forEach(el=>{
+    const gi=el.id.replace('rg_step_','');
+    if(isNaN(gi))return;
+    const label=(document.getElementById('rg_step_lbl_'+gi)||{}).value||'';
+    const txt=(document.getElementById('rg_step_txt_'+gi)||{}).value||'';
+    const steps=txt.split('\n').map(l=>l.trim()).filter(l=>l);
     if(steps.length)stepGroups.push({label:label.trim(),steps});
   });
   if(!stepGroups.length)stepGroups.push({label:'',steps:[]});
@@ -1095,7 +1210,7 @@ function showSheet(html){document.getElementById('sheet').innerHTML=html;documen
 function closeSheet(){document.getElementById('mw').style.display='none';}
 function closeMW(e){if(e.target===document.getElementById('mw'))closeSheet();}
 
-applyTheme();renderInv();renderRec();renderShop();updateBadge();
+applyTheme();renderRec();renderShop();updateBadge();switchTab('rec');
 </script>
 <script>
 // Firebase初期化（DOM構築後）
