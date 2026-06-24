@@ -696,21 +696,6 @@ function addSelectedToWaitDm(){
   dmSelectedRecs.clear();
   renderDm();
 }
-function addSelectedToWaitDm(){
-  if(!dmSelectedRecs.size)return;
-  let added=0;
-  dmSelectedRecs.forEach(rid=>{
-    const r=S.recipes.find(x=>x.id===rid);
-    if(!r)return;
-    if(S.waitingMenu.find(x=>x.recipeId===rid&&!x.checked)){return;}
-    S.waitingMenu.push({id:Date.now()+Math.random(),name:r.name,recipeId:rid,checked:false});
-    added++;
-  });
-  if(added>0){saveData();toast(`${added}品を作るリストに追加しました`);}
-  else{toast('すでにリストにあります');}
-  dmSelectedRecs.clear();
-  renderDm();
-}
 function addAllMissingDm(){
   const missing=calcMissingFrom(dmSelectedRecs);if(!missing.length)return;
   missing.forEach(m=>{const key=m.name.toLowerCase();if(!S.shopping.find(x=>x.name.toLowerCase()===key))S.shopping.push({id:Date.now()+Math.random(),name:m.name,qty:m.displayQty,checked:false});});
