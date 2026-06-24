@@ -44,6 +44,7 @@ function _loadFromFirestore(user){
       }
       if(d.shopping)S.shopping=d.shopping;
     if(d.waitingMenu)S.waitingMenu=d.waitingMenu;
+    if(d.mealPlans)S.mealPlans=d.mealPlans;
       if(d.cfg)Object.assign(CFG,d.cfg);
       S.nid=Math.max(20,...S.inventory.map(x=>x.id||0))+1;
       S.nrid=Math.max(10,...S.recipes.map(x=>x.id||0))+1;
@@ -331,6 +332,25 @@ body{display:flex;justify-content:center;align-items:flex-start;min-height:100vh
   </div>
 </div>
 
+<div class="screen" id="screen-plan">
+  <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:#fff;border-bottom:0.5px solid #e0e0e0;flex-shrink:0">
+    <span class="screen-label">献立</span>
+    <span style="flex:1"></span>
+    <button class="shop-add-btn" onclick="openPlanSheet(null)"><i class="bi bi-plus-lg"></i>日付を追加</button>
+  </div>
+  <div class="scroll" id="plan-c"></div>
+</div>
+<div class="screen" id="screen-dm">
+  <div class="lv" id="dm-lv">
+    <div class="sbar"><span class="screen-label">糖尿病食</span><input type="text" id="dm-search" placeholder="レシピを検索..." oninput="renderDm()"></div>
+    <div class="rec-sel-bar"><div class="rec-sel-summary"><span id="dm-sel-txt">レシピを選んで不足食材をまとめて追加</span><button class="add-all-btn" id="dm-add-all-btn" disabled onclick="addAllMissingDm()"><i class="bi bi-cart-plus"></i><span id="dm-add-all-label">追加</span></button></div></div>
+    <div class="scroll" id="dm-c"></div>
+  </div>
+  <div class="dv" id="dm-dv">
+    <div class="sbar" style="gap:8px"><button class="btn" style="height:30px" onclick="closeDmDetail()"><i class="bi bi-arrow-left"></i>戻る</button><div style="flex:1"></div><button class="btn s" id="dm-det-edit"><i class="bi bi-pencil"></i>編集</button><button class="btn s d" id="dm-det-del"><i class="bi bi-trash"></i></button></div>
+    <div class="scroll" id="dm-dc"></div>
+  </div>
+</div>
 <div class="screen" id="screen-menu">
   <div style="background:var(--ac-light);border-bottom:0.5px solid #e0e0e0;padding:8px 12px;flex-shrink:0;display:flex;align-items:center;gap:8px">
     <span class="screen-label">献立</span>
@@ -358,9 +378,11 @@ body{display:flex;justify-content:center;align-items:flex-start;min-height:100vh
 <nav class="bottomnav">
   <button class="bnav active" id="bnav-inv" onclick="switchTab('inv')" style="display:none"><i class="bi bi-box-seam"></i><span>在庫</span></button>
   <button class="bnav" id="bnav-rec" onclick="switchTab('rec')"><i class="bi bi-journal-richtext"></i><span>レシピ</span></button>
+  <button class="bnav" id="bnav-dm" onclick="switchTab('dm')"><i class="bi bi-heart-pulse"></i><span>糖尿病食</span></button>
   <button class="bnav" id="bnav-menu" onclick="switchTab('menu')"><i class="bi bi-egg-fried"></i><span>献立</span></button>
   <button class="bnav" id="bnav-shop" onclick="switchTab('shop')"><div class="bdg"><i class="bi bi-cart3"></i><span class="bdg-n" id="shop-bdg">0</span></div><span>買い物</span></button>
-  <button class="bnav" id="bnav-wait" onclick="switchTab('wait')"><i class="bi bi-calendar2-check"></i><span>献立待機</span></button>
+  <button class="bnav" id="bnav-wait" onclick="switchTab('wait')"><i class="bi bi-list-check"></i><span>作るリスト</span></button>
+  <button class="bnav" id="bnav-plan" onclick="switchTab('plan')"><i class="bi bi-calendar3"></i><span>献立</span></button>
 </nav>
 
 <div class="mw" id="mw" style="display:none" onclick="closeMW(event)"><div class="sheet" id="sheet" onclick="e=>e.stopPropagation()"></div></div>
@@ -466,7 +488,7 @@ const S={
   recCats:['和食','洋食','中華','麺類','スープ','デザート','その他'],
   inventory:[],
   recipes:[],
-  shopping:[],waitingMenu:[],selectedRecs:new Set(),nid:1,nrid:1,tab:'rec',curRec:null
+  shopping:[],waitingMenu:[],mealPlans:[],selectedRecs:new Set(),nid:1,nrid:1,tab:'rec',curRec:null
 };
 
 (function init(){
@@ -481,6 +503,7 @@ const S={
     }
     if(saved.shopping)S.shopping=saved.shopping;
     if(saved.waitingMenu)S.waitingMenu=saved.waitingMenu;
+    if(saved.mealPlans)S.mealPlans=saved.mealPlans;
     if(saved.cfg)Object.assign(CFG,saved.cfg);
     S.nid=Math.max(20,...S.inventory.map(x=>x.id||0))+1;
     S.nrid=Math.max(10,...S.recipes.map(x=>x.id||0))+1;
@@ -498,14 +521,14 @@ function updateShopCount(){const n=S.shopping.filter(x=>!x.checked).length;const
 
 function switchTab(t){
   S.tab=t;
-  ['inv','rec','menu','shop','wait'].forEach(x=>{
+  ['inv','rec','menu','shop','wait','plan','dm'].forEach(x=>{
     const s=document.getElementById('screen-'+x);if(s)s.classList.toggle('active',x===t);
     const b=document.getElementById('bnav-'+x);if(b)b.classList.toggle('active',x===t);
   });
-  const titles={inv:'在庫管理',rec:'レシピ',menu:'献立',shop:'買い物リスト',wait:'献立待機リスト'};
+  const titles={inv:'在庫管理',rec:'レシピ',menu:'献立',shop:'買い物リスト',wait:'作るリスト',plan:'献立',dm:'糖尿病食レシピ'};
   document.getElementById('topbar-title').textContent=titles[t]||t;
 
-  const showTop=t!=='shop'&&t!=='menu'&&t!=='wait';
+  const showTop=t!=='shop'&&t!=='menu'&&t!=='wait'&&t!=='dm'&&t!=='plan';
   document.getElementById('cat-btn').style.display=showTop?'flex':'none';
   document.getElementById('add-btn').style.display=showTop?'flex':'none';
   if(t==='inv')renderInv();
@@ -513,6 +536,8 @@ function switchTab(t){
   if(t==='menu')renderMenu();
   if(t==='shop')renderShop();
   if(t==='wait')renderWait();
+  if(t==='dm'){renderDm();}
+  if(t==='plan')renderPlan();
 }
 function handleAdd(){S.tab==='inv'?openItemSheet():openRecSheet();}
 function openCatManage(){catManageSheet(S.tab==='inv'?'inv':'rec');}
@@ -579,6 +604,123 @@ function openItemSheet(id){const it=id?S.inventory.find(x=>x.id===id):null;const
 function saveItem(id){const name=document.getElementById('m-n').value.trim();const qty=document.getElementById('m-q').value.trim();const ci=parseInt(document.getElementById('m-ci').value);const exp=document.getElementById('m-exp').value;if(!name)return alert('食材名を入力してください');if(id){const it=S.inventory.find(x=>x.id===id);Object.assign(it,{name,qty,ci,exp});}else S.inventory.push({id:S.nid++,name,qty,ci,exp});closeSheet();renderInv();saveData();}
 function delItem(id){if(!confirm('削除しますか？'))return;S.inventory=S.inventory.filter(x=>x.id!==id);renderInv();saveData();}
 
+function setRtype(t){
+  ['normal','dm'].forEach(k=>{
+    const btn=document.getElementById('rtype-'+k);
+    if(btn)btn.classList.toggle('on',k===t);
+  });
+}
+
+// 糖尿病食タブ用（レシピタブと同じ構造）
+let dmSelectedRecs=new Set();
+let dmFolderOpen={};
+
+function renderDm(){
+  const q=document.getElementById('dm-search').value.toLowerCase();
+  // 糖尿病食レシピのみ
+  const dmRecipes=S.recipes.filter(r=>r.rtype==='dm');
+  updateDmAddAllBtn();
+  let html='<div style="padding-bottom:8px">',any=false;
+  S.recCats.forEach((cat,ci)=>{
+    const items=dmRecipes.filter(r=>r.ci===ci&&r.name.toLowerCase().includes(q));
+    if(!items.length)return;
+    any=true;
+    const isOpen=dmFolderOpen[ci]!==false;
+    html+=`<div class="folder"><div class="folder-header fhc" onclick="toggleDmFolder(${ci})">
+      <i class="folder-icon bi ${isOpen?'bi-folder2-open':'bi-folder2'}"></i>
+      <span class="folder-name">${cat}</span>
+      <div class="folder-meta"><span class="folder-count">${items.length}品</span></div>
+      <i class="folder-chevron bi bi-chevron-right ${isOpen?'open':''}"></i>
+    </div>`;
+    if(isOpen){
+      html+=`<div class="folder-body">`;
+      items.forEach(r=>{html+=dmRowHtml(r);});
+      html+=`</div>`;
+    }
+    html+=`</div>`;
+  });
+  if(!any)html='<div class="em"><i class="bi bi-heart-pulse"></i>'+(q?`「${q}」が見つかりません`:'糖尿病食レシピがありません')+'<br><button class="btn p" style="margin-top:12px" onclick="openRecSheet()" >レシピを追加</button></div>';
+  html+='</div>';
+  document.getElementById('dm-c').innerHTML=html;
+}
+function toggleDmFolder(ci){dmFolderOpen[ci]=!dmFolderOpen[ci];renderDm();}
+function dmRowHtml(r){
+  const isSel=dmSelectedRecs.has(r.id);const mc=missingCount(r);const fav=r.fav?'on':'';
+  return `<div class="rec-row" id="dm-row-${r.id}">
+    <div class="rec-check ${isSel?'checked':''}" onclick="toggleDmSel(${r.id},event)">${isSel?'<i class="bi bi-check"></i>':''}</div>
+    <div class="rec-row-body" onclick="openDmDetail(${r.id})">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="rec-row-name">${r.name}</span>
+        <span style="font-size:11px;padding:1px 6px;border-radius:8px;white-space:nowrap;${mc>0?'background:#fff3cd;color:#856404':'background:#d4edda;color:#155724'}">${mc>0?`不足${mc}品`:'◎'}</span>
+      </div>
+      ${r.sv?`<div class="rec-row-sv">${r.sv}</div>`:''}
+    </div>
+    <button class="star-btn ${fav}" onclick="toggleRecFav(${r.id},event)" title="お気に入り">★</button>
+    <div class="rec-row-acts">
+      <button class="icb" onclick="openRecSheet(${r.id});event.stopPropagation()"><i class="bi bi-pencil"></i></button>
+      <button class="icb del" onclick="if(confirm('削除しますか？')){S.recipes=S.recipes.filter(x=>x.id!==${r.id});dmSelectedRecs.delete(${r.id});renderDm();saveData();}event.stopPropagation()"><i class="bi bi-trash"></i></button>
+    </div>
+  </div>`;
+}
+function toggleDmSel(rid,e){
+  e.stopPropagation();
+  if(dmSelectedRecs.has(rid))dmSelectedRecs.delete(rid);else dmSelectedRecs.add(rid);
+  const row=document.getElementById('dm-row-'+rid);
+  if(row){const isSel=dmSelectedRecs.has(rid);const chk=row.querySelector('.rec-check');if(chk){chk.className='rec-check '+(isSel?'checked':'');chk.innerHTML=isSel?'<i class="bi bi-check"></i>':'';}}
+  updateDmAddAllBtn();
+}
+function updateDmAddAllBtn(){
+  const missing=calcMissingFrom(dmSelectedRecs);
+  const btn=document.getElementById('dm-add-all-btn');
+  const lbl=document.getElementById('dm-add-all-label');
+  const txt=document.getElementById('dm-sel-txt');
+  const n=dmSelectedRecs.size;
+  if(!n){txt&&(txt.textContent='レシピを選んで不足食材をまとめて追加');lbl&&(lbl.textContent='追加');if(btn)btn.disabled=true;}
+  else{txt&&(txt.textContent=`${n}品のレシピ選択中`);if(missing.length>0){lbl&&(lbl.textContent=`不足 ${missing.length}品を追加`);if(btn)btn.disabled=false;}else{lbl&&(lbl.textContent='食材は揃っています');if(btn)btn.disabled=true;}}
+}
+function calcMissingFrom(selSet){
+  const needed=new Map();
+  selSet.forEach(rid=>{const r=S.recipes.find(x=>x.id===rid);if(!r)return;allIngs(r).forEach(ing=>{const key=ing.name.toLowerCase();const{num,unit}=parseQty(ing.qty);if(!needed.has(key))needed.set(key,{name:ing.name,byUnit:new Map()});const e=needed.get(key);let ok=false;for(const[u,n]of e.byUnit){if(sameUnit(u,unit)){e.byUnit.set(u,n+(num||0));ok=true;break;}}if(!ok)e.byUnit.set(unit,num||0);});});
+  const res=[];needed.forEach((e,key)=>{const inv=S.inventory.find(x=>x.name.toLowerCase()===key);const{num:hN,unit:hU}=inv?parseQty(inv.qty):{num:0,unit:''};e.byUnit.forEach((nN,nU)=>{if(!nN||isNaN(nN)){if(!inv)res.push({name:e.name,displayQty:nU||''});return;}let sh;if(hN&&hN>0&&(sameUnit(hU,nU)||!hU)){sh=nN-hN;}else if(!inv){sh=nN;}else{sh=0;}if(sh>0){const d=Number.isInteger(sh)?sh:parseFloat(sh.toFixed(2));res.push({name:e.name,displayQty:`${d}${nU}`});}});});
+  return res;
+}
+function addAllMissingDm(){
+  const missing=calcMissingFrom(dmSelectedRecs);if(!missing.length)return;
+  missing.forEach(m=>{const key=m.name.toLowerCase();if(!S.shopping.find(x=>x.name.toLowerCase()===key))S.shopping.push({id:Date.now()+Math.random(),name:m.name,qty:m.displayQty,checked:false});});
+  updateBadge();toast(`${missing.length}品を買い物リストに追加しました`);dmSelectedRecs.clear();renderDm();saveData();
+}
+function openDmDetail(id){
+  S.curRec=id;
+  document.getElementById('dm-lv').style.display='none';
+  document.getElementById('dm-dv').classList.add('active');
+  document.getElementById('topbar-title').textContent='レシピ詳細';
+  const r=S.recipes.find(x=>x.id===id);
+  document.getElementById('dm-det-edit').onclick=()=>openRecSheet(id);
+  document.getElementById('dm-det-del').onclick=()=>{if(confirm('削除しますか？')){S.recipes=S.recipes.filter(x=>x.id!==id);dmSelectedRecs.delete(id);closeDmDetail();saveData();}};
+  const ingHtml=renderIngGroups(r,S.inventory);
+  const steps=renderStepGroups(r);
+  document.getElementById('dm-dc').innerHTML=`
+    <div style="margin-bottom:8px">
+      <div style="font-size:19px;font-weight:500;margin-bottom:2px;color:#333">${r.name}</div>
+      <div style="font-size:12px;color:#aaa;margin-bottom:4px">${S.recCats[r.ci]||''}${r.sv?' · '+r.sv:''}</div>
+      ${urlHtml(r)}
+    </div>
+    <div class="sbox">
+      <button class="sbox-toggle" onclick="toggleDetailSection('ing')"><h5>材料</h5><i class="bi bi-chevron-right ${detailOpen.ing?'open':''}"></i></button>
+      <div class="sbox-body" id="detail-ing" style="display:${detailOpen.ing?'block':'none'}">${ingHtml}</div>
+    </div>
+    <div class="sbox">
+      <button class="sbox-toggle" onclick="toggleDetailSection('step')"><h5>作り方</h5><i class="bi bi-chevron-right ${detailOpen.step?'open':''}"></i></button>
+      <div class="sbox-body" id="detail-step" style="display:${detailOpen.step?'block':'none'}">${steps}</div>
+    </div>`;
+}
+function closeDmDetail(){
+  S.curRec=null;
+  document.getElementById('dm-lv').style.display='flex';
+  document.getElementById('dm-dv').classList.remove('active');
+  document.getElementById('topbar-title').textContent='糖尿病食レシピ';
+  renderDm();
+}
 function toggleRecFavFolder(){folderOpen['fav']=folderOpen['fav']===false?true:false;renderRec();}
 function toggleRecFav(id,e){e.stopPropagation();const r=S.recipes.find(x=>x.id===id);if(r){r.fav=!r.fav;renderRec();saveData();}}
 function recRowHtml(r){
@@ -858,6 +1000,7 @@ function openRecSheet(id,defaultCi){
       <div style="grid-column:1/-1"><label>レシピ名</label><input type="text" id="rn" value="${r?r.name:''}"></div>
       <div><label>フォルダ</label><select id="rci">${opts}</select></div>
       <div><label>人数</label><input type="text" id="rsv" placeholder="2人分" value="${r?r.sv:''}"></div>
+      <div style="grid-column:1/-1"><label>種別</label><div class="seg"><button type="button" class="seg-btn ${(!r||r.rtype!=='dm')?'on':''}" id="rtype-normal" onclick="setRtype('normal')">通常レシピ</button><button type="button" class="seg-btn ${(r&&r.rtype==='dm')?'on':''}" id="rtype-dm" onclick="setRtype('dm')">糖尿病食</button></div></div>
       <div style="grid-column:1/-1"><label>参考URL（任意）</label><input type="url" id="rurl" placeholder="https://..." value="${r?r.url||'':''}"></div>
     </div>
     <div>
@@ -937,8 +1080,9 @@ function saveRec(id){
     if(steps.length)stepGroups.push({label:label.trim(),steps});
   });
   if(!stepGroups.length)stepGroups.push({label:'',steps:[]});
-  if(id){const r=S.recipes.find(x=>x.id===id);Object.assign(r,{name,ci,sv,url,ingGroups,stepGroups});delete r.steps;}
-  else{S.recipes.push({id:S.nrid++,name,ci,sv,url,ingGroups,stepGroups});folderOpen[ci]=true;}
+  const rtype=document.getElementById('rtype-dm')&&document.getElementById('rtype-dm').classList.contains('on')?'dm':'normal';
+  if(id){const r=S.recipes.find(x=>x.id===id);Object.assign(r,{name,ci,sv,url,ingGroups,stepGroups,rtype});delete r.steps;}
+  else{S.recipes.push({id:S.nrid++,name,ci,sv,url,ingGroups,stepGroups,rtype});folderOpen[ci]=true;}
   closeSheet();
   if(S.curRec===id&&id)openDetail(id);else closeDetail();
   saveData();
@@ -1134,6 +1278,102 @@ function doReset(){
   renderInv();renderRec();renderShop();renderMenu();updateBadge();
   toast('リセットしました');
 }
+
+// ===== 献立プラン機能 =====
+let planNid=1;
+let mealNid=1;
+
+function renderPlan(){
+  const plans=[...S.mealPlans].sort((a,b)=>a.date<b.date?-1:1);
+  if(!plans.length){
+    document.getElementById('plan-c').innerHTML=`<div class="em"><i class="bi bi-calendar3"></i>献立がありません<br><button class="btn p" style="margin-top:12px" onclick="openPlanSheet(null)">日付を追加</button></div>`;
+    return;
+  }
+  let h='<div style="padding-bottom:8px">';
+  plans.forEach(plan=>{
+    h+=`<div class="folder" style="margin-bottom:8px">
+      <div class="folder-header fhc" style="display:flex;align-items:center;gap:8px;cursor:default">
+        <i class="bi bi-calendar3 folder-icon"></i>
+        <span class="folder-name">${plan.date}</span>
+        <div style="margin-left:auto;display:flex;gap:4px">
+          <button class="icb" onclick="openPlanSheet('${plan.id}')" title="編集"><i class="bi bi-pencil"></i></button>
+          <button class="icb del" onclick="deletePlan('${plan.id}')" title="削除"><i class="bi bi-trash"></i></button>
+        </div>
+      </div>
+      <div class="folder-body" style="padding:8px 12px;display:flex;flex-direction:column;gap:8px">
+        ${(plan.meals||[]).map(m=>`
+          <div style="background:#fafafa;border:.5px solid #e8e8e8;border-radius:8px;padding:8px 10px">
+            <div style="font-size:11px;font-weight:600;color:var(--ac-dark);margin-bottom:4px">${m.label}</div>
+            <div style="font-size:12px;color:#555;white-space:pre-wrap;line-height:1.7">${m.content||'（未入力）'}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  });
+  h+='</div>';
+  document.getElementById('plan-c').innerHTML=h;
+}
+
+function openPlanSheet(planId){
+  const plan=planId?S.mealPlans.find(x=>x.id===planId):null;
+  const initMeals=plan?plan.meals:[
+    {id:'m1',label:'朝食',content:''},
+    {id:'m2',label:'昼食',content:''},
+    {id:'m3',label:'夕食',content:''},
+  ];
+  function buildMealRows(meals){
+    return meals.map((m,i)=>`
+      <div class="ing-group-edit" id="meal_${i}">
+        <div class="ing-group-edit-header">
+          <input type="text" placeholder="食事名（例: 朝食・昼食・間食）" value="${m.label}" id="meal_lbl_${i}" style="flex:2">
+          <button onclick="rmMealRow(${i})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button>
+        </div>
+        <textarea id="meal_txt_${i}" style="width:100%;min-height:70px;font-size:12px;line-height:1.8;padding:6px 8px;border:.5px solid #ccc;border-radius:7px;background:#fafafa;color:#333;resize:vertical" placeholder="献立を入力&#10;例：&#10;ごはん&#10;みそ汁&#10;焼き魚">${m.content||''}</textarea>
+      </div>`).join('');
+  }
+  showSheet(`<h3>${plan?'献立を編集':'献立を追加'}</h3>
+    <div><label>日付</label><input type="date" id="plan-date" value="${plan?plan.date:new Date().toISOString().slice(0,10)}"></div>
+    <div>
+      <label>食事</label>
+      <div id="meal-ed" style="display:flex;flex-direction:column;gap:5px">${buildMealRows(initMeals)}</div>
+      <button class="btn s" style="margin-top:6px" onclick="addMealRow()"><i class="bi bi-plus-lg"></i>食事を追加</button>
+    </div>
+    <div class="sf"><button class="btn" onclick="closeSheet()">キャンセル</button><button class="btn p" onclick="savePlan('${planId||''}')">保存</button></div>`);
+}
+
+function addMealRow(){
+  const ed=document.getElementById('meal-ed');if(!ed)return;
+  const i=ed.querySelectorAll('.ing-group-edit').length;
+  const d=document.createElement('div');d.className='ing-group-edit';d.id='meal_'+i;
+  d.innerHTML=`<div class="ing-group-edit-header"><input type="text" placeholder="食事名（例: 間食）" id="meal_lbl_${i}" style="flex:2"><button onclick="rmMealRow(${i})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button></div><textarea id="meal_txt_${i}" style="width:100%;min-height:70px;font-size:12px;line-height:1.8;padding:6px 8px;border:.5px solid #ccc;border-radius:7px;background:#fafafa;color:#333;resize:vertical" placeholder="献立を入力"></textarea>`;
+  ed.appendChild(d);
+}
+function rmMealRow(i){const el=document.getElementById('meal_'+i);if(el)el.remove();}
+
+function savePlan(planId){
+  const date=document.getElementById('plan-date').value;
+  if(!date)return alert('日付を入力してください');
+  const meals=[];
+  document.querySelectorAll('[id^="meal_"]').forEach(el=>{
+    const i=el.id.replace('meal_','');
+    if(isNaN(i))return;
+    const label=(document.getElementById('meal_lbl_'+i)||{}).value||'';
+    const content=(document.getElementById('meal_txt_'+i)||{}).value||'';
+    if(label)meals.push({id:'m'+i,label,content});
+  });
+  if(planId){
+    const plan=S.mealPlans.find(x=>x.id===planId);
+    if(plan)Object.assign(plan,{date,meals});
+  } else {
+    S.mealPlans.push({id:'p'+(planNid++)+Date.now(),date,meals});
+  }
+  closeSheet();renderPlan();saveData();
+}
+function deletePlan(planId){
+  if(!confirm('この献立を削除しますか？'))return;
+  S.mealPlans=S.mealPlans.filter(x=>x.id!==planId);
+  renderPlan();saveData();
+}
+// ===== 献立プラン機能ここまで =====
 
 function addToWaitList(name){
   if(S.waitingMenu.find(x=>x.name===name&&!x.checked)){toast('すでにリストにあります');return;}
