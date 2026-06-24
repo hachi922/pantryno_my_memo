@@ -380,9 +380,8 @@ body{display:flex;justify-content:center;align-items:flex-start;min-height:100vh
   <button class="bnav" id="bnav-rec" onclick="switchTab('rec')"><i class="bi bi-journal-richtext"></i><span>レシピ</span></button>
   <button class="bnav" id="bnav-dm" onclick="switchTab('dm')"><i class="bi bi-heart-pulse"></i><span>糖尿病食</span></button>
   <button class="bnav" id="bnav-menu" onclick="switchTab('menu')"><i class="bi bi-egg-fried"></i><span>献立</span></button>
-  <button class="bnav" id="bnav-shop" onclick="switchTab('shop')"><div class="bdg"><i class="bi bi-cart3"></i><span class="bdg-n" id="shop-bdg">0</span></div><span>買い物</span></button>
   <button class="bnav" id="bnav-wait" onclick="switchTab('wait')"><i class="bi bi-list-check"></i><span>作るリスト</span></button>
-  <button class="bnav" id="bnav-plan" onclick="switchTab('plan')"><i class="bi bi-calendar3"></i><span>献立</span></button>
+  <button class="bnav" id="bnav-shop" onclick="switchTab('shop')"><div class="bdg"><i class="bi bi-cart3"></i><span class="bdg-n" id="shop-bdg">0</span></div><span>買い物</span></button>
 </nav>
 
 <div class="mw" id="mw" style="display:none" onclick="closeMW(event)"><div class="sheet" id="sheet" onclick="e=>e.stopPropagation()"></div></div>
@@ -521,14 +520,14 @@ function updateShopCount(){const n=S.shopping.filter(x=>!x.checked).length;const
 
 function switchTab(t){
   S.tab=t;
-  ['inv','rec','menu','shop','wait','plan','dm'].forEach(x=>{
+  ['inv','rec','menu','shop','wait','dm'].forEach(x=>{
     const s=document.getElementById('screen-'+x);if(s)s.classList.toggle('active',x===t);
     const b=document.getElementById('bnav-'+x);if(b)b.classList.toggle('active',x===t);
   });
-  const titles={inv:'在庫管理',rec:'レシピ',menu:'献立',shop:'買い物リスト',wait:'作るリスト',plan:'献立',dm:'糖尿病食レシピ'};
+  const titles={inv:'在庫管理',rec:'レシピ',menu:'献立',shop:'買い物リスト',wait:'作るリスト',dm:'糖尿病食レシピ'};
   document.getElementById('topbar-title').textContent=titles[t]||t;
 
-  const showTop=t!=='shop'&&t!=='menu'&&t!=='wait'&&t!=='dm'&&t!=='plan';
+  const showTop=t!=='shop'&&t!=='menu'&&t!=='wait'&&t!=='dm';
   document.getElementById('cat-btn').style.display=showTop?'flex':'none';
   document.getElementById('add-btn').style.display=showTop?'flex':'none';
   if(t==='inv')renderInv();
@@ -537,7 +536,6 @@ function switchTab(t){
   if(t==='shop')renderShop();
   if(t==='wait')renderWait();
   if(t==='dm'){renderDm();}
-  if(t==='plan')renderPlan();
 }
 function handleAdd(){S.tab==='inv'?openItemSheet():openRecSheet();}
 function openCatManage(){catManageSheet(S.tab==='inv'?'inv':'rec');}
@@ -622,7 +620,7 @@ function renderDm(){
   updateDmAddAllBtn();
   let html='<div style="padding-bottom:8px">',any=false;
   S.recCats.forEach((cat,ci)=>{
-    const items=dmRecipes.filter(r=>r.ci===ci&&r.name.toLowerCase().includes(q));
+    const items=dmRecipes.filter(r=>r.ci===ci&&(r.name.toLowerCase().includes(q)||allIngs(r).some(ing=>ing.name.toLowerCase().includes(q))));
     if(!items.length)return;
     any=true;
     const isOpen=dmFolderOpen[ci]!==false;
@@ -735,7 +733,7 @@ function recRowHtml(r){
       ${r.sv?`<div class="rec-row-sv">${r.sv}</div>`:''}
     </div>
     <button class="star-btn ${fav}" onclick="toggleRecFav(${r.id},event)" title="お気に入り">★</button>
-    <button class="icb" onclick="addToWaitList('${r.name}');event.stopPropagation()" title="献立待機リストへ追加" style="color:var(--ac-mid)"><i class="bi bi-calendar2-plus"></i></button>
+    <button class="icb" onclick="addToWaitList('${r.name}',${r.id});event.stopPropagation()" title="献立待機リストへ追加" style="color:var(--ac-mid)"><i class="bi bi-calendar2-plus"></i></button>
     <div class="rec-row-acts">
       <button class="icb" onclick="openRecSheet(${r.id});event.stopPropagation()"><i class="bi bi-pencil"></i></button>
       <button class="icb del" onclick="if(confirm('削除しますか？')){S.recipes=S.recipes.filter(x=>x.id!==${r.id});S.selectedRecs.delete(${r.id});renderRec();saveData();}event.stopPropagation()"><i class="bi bi-trash"></i></button>
@@ -781,7 +779,7 @@ function renderRec(){
   }
   let any=false;
   S.recCats.forEach((cat,ci)=>{
-    const items=S.recipes.filter(r=>r.ci===ci&&r.name.toLowerCase().includes(q));
+    const items=S.recipes.filter(r=>r.ci===ci&&(r.name.toLowerCase().includes(q)||allIngs(r).some(ing=>ing.name.toLowerCase().includes(q))));
     if(!items.length)return;
     any=true;
     const isOpen=folderOpen[ci]!==false;
@@ -1281,7 +1279,14 @@ function doReset(){
 
 // ===== 献立プラン機能 =====
 let planNid=1;
-let mealNid=1;
+const planOpen={};
+
+function fmtPlanDate(d){
+  if(!d)return'';
+  const dt=new Date(d+'T00:00:00');
+  const w=['日','月','火','水','木','金','土'][dt.getDay()];
+  return`${d.slice(5).replace('-','/')}（${w}）`;
+}
 
 function renderPlan(){
   const plans=[...S.mealPlans].sort((a,b)=>a.date<b.date?-1:1);
@@ -1291,80 +1296,52 @@ function renderPlan(){
   }
   let h='<div style="padding-bottom:8px">';
   plans.forEach(plan=>{
-    h+=`<div class="folder" style="margin-bottom:8px">
-      <div class="folder-header fhc" style="display:flex;align-items:center;gap:8px;cursor:default">
-        <i class="bi bi-calendar3 folder-icon"></i>
-        <span class="folder-name">${plan.date}</span>
-        <div style="margin-left:auto;display:flex;gap:4px">
-          <button class="icb" onclick="openPlanSheet('${plan.id}')" title="編集"><i class="bi bi-pencil"></i></button>
-          <button class="icb del" onclick="deletePlan('${plan.id}')" title="削除"><i class="bi bi-trash"></i></button>
+    const isOpen=planOpen[plan.id]!==false;
+    const preview=plan.content?(plan.content.split('\n').slice(0,2).join('　')):'';
+    h+=`<div style="background:#fff;border:.5px solid #e0e0e0;border-radius:10px;margin-bottom:6px;overflow:hidden">
+      <div class="folder-header fhc" onclick="togglePlanCard('${plan.id}')" style="padding:8px 12px">
+        <i class="bi bi-calendar3 folder-icon" style="font-size:15px"></i>
+        <span class="folder-name" style="font-size:13px">${fmtPlanDate(plan.date)}</span>
+        ${!isOpen&&preview?`<span style="font-size:11px;color:rgba(255,255,255,.75);flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;min-width:0;margin-left:4px">${preview}</span>`:'<span style="flex:1"></span>'}
+        <div style="display:flex;gap:2px;flex-shrink:0" onclick="event.stopPropagation()">
+          <button class="icb" onclick="openPlanSheet('${plan.id}')"><i class="bi bi-pencil"></i></button>
+          <button class="icb del" onclick="deletePlan('${plan.id}')"><i class="bi bi-trash"></i></button>
         </div>
+        <i class="bi bi-chevron-right folder-chevron ${isOpen?'open':''}" style="font-size:13px"></i>
       </div>
-      <div class="folder-body" style="padding:8px 12px;display:flex;flex-direction:column;gap:8px">
-        ${(plan.meals||[]).map(m=>`
-          <div style="background:#fafafa;border:.5px solid #e8e8e8;border-radius:8px;padding:8px 10px">
-            <div style="font-size:11px;font-weight:600;color:var(--ac-dark);margin-bottom:4px">${m.label}</div>
-            <div style="font-size:12px;color:#555;white-space:pre-wrap;line-height:1.7">${m.content||'（未入力）'}</div>
-          </div>`).join('')}
-      </div>
+      ${isOpen?`<div style="padding:8px 12px;border-top:.5px solid #e8e8e8">
+        <div style="font-size:12px;color:#444;white-space:pre-wrap;line-height:1.8">${plan.content||'（未入力）'}</div>
+      </div>`:''}
     </div>`;
   });
   h+='</div>';
   document.getElementById('plan-c').innerHTML=h;
 }
 
-function openPlanSheet(planId){
-  const plan=planId?S.mealPlans.find(x=>x.id===planId):null;
-  const initMeals=plan?plan.meals:[
-    {id:'m1',label:'朝食',content:''},
-    {id:'m2',label:'昼食',content:''},
-    {id:'m3',label:'夕食',content:''},
-  ];
-  function buildMealRows(meals){
-    return meals.map((m,i)=>`
-      <div class="ing-group-edit" id="meal_${i}">
-        <div class="ing-group-edit-header">
-          <input type="text" placeholder="食事名（例: 朝食・昼食・間食）" value="${m.label}" id="meal_lbl_${i}" style="flex:2">
-          <button onclick="rmMealRow(${i})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button>
-        </div>
-        <textarea id="meal_txt_${i}" style="width:100%;min-height:70px;font-size:12px;line-height:1.8;padding:6px 8px;border:.5px solid #ccc;border-radius:7px;background:#fafafa;color:#333;resize:vertical" placeholder="献立を入力&#10;例：&#10;ごはん&#10;みそ汁&#10;焼き魚">${m.content||''}</textarea>
-      </div>`).join('');
-  }
-  showSheet(`<h3>${plan?'献立を編集':'献立を追加'}</h3>
-    <div><label>日付</label><input type="date" id="plan-date" value="${plan?plan.date:new Date().toISOString().slice(0,10)}"></div>
-    <div>
-      <label>食事</label>
-      <div id="meal-ed" style="display:flex;flex-direction:column;gap:5px">${buildMealRows(initMeals)}</div>
-      <button class="btn s" style="margin-top:6px" onclick="addMealRow()"><i class="bi bi-plus-lg"></i>食事を追加</button>
-    </div>
-    <div class="sf"><button class="btn" onclick="closeSheet()">キャンセル</button><button class="btn p" onclick="savePlan('${planId||''}')">保存</button></div>`);
+function togglePlanCard(id){
+  planOpen[id]=planOpen[id]===false?true:false;
+  renderPlan();
 }
 
-function addMealRow(){
-  const ed=document.getElementById('meal-ed');if(!ed)return;
-  const i=ed.querySelectorAll('.ing-group-edit').length;
-  const d=document.createElement('div');d.className='ing-group-edit';d.id='meal_'+i;
-  d.innerHTML=`<div class="ing-group-edit-header"><input type="text" placeholder="食事名（例: 間食）" id="meal_lbl_${i}" style="flex:2"><button onclick="rmMealRow(${i})" style="width:24px;height:24px;border:none;background:none;cursor:pointer;color:#bbb;font-size:16px;flex-shrink:0">×</button></div><textarea id="meal_txt_${i}" style="width:100%;min-height:70px;font-size:12px;line-height:1.8;padding:6px 8px;border:.5px solid #ccc;border-radius:7px;background:#fafafa;color:#333;resize:vertical" placeholder="献立を入力"></textarea>`;
-  ed.appendChild(d);
+function openPlanSheet(planId){
+  const plan=planId?S.mealPlans.find(x=>x.id===planId):null;
+  showSheet(`<h3>${plan?'献立を編集':'献立を追加'}</h3>
+    <div><label>日付</label><input type="date" id="plan-date" value="${plan?plan.date:new Date().toISOString().slice(0,10)}"></div>
+    <div><label>献立（朝昼晩・間食などまとめて自由に入力）</label>
+    <textarea id="plan-content" style="width:100%;min-height:140px;font-size:13px;line-height:1.9;padding:8px 10px;border:.5px solid #ccc;border-radius:9px;background:#fafafa;color:#333;resize:vertical" placeholder="例：&#10;朝：トースト、ヨーグルト&#10;昼：親子丼&#10;間食：りんご&#10;夜：肉じゃが、みそ汁、ごはん">${plan?plan.content||'':''}</textarea></div>
+    <div class="sf"><button class="btn" onclick="closeSheet()">キャンセル</button><button class="btn p" onclick="savePlan('${planId||''}')">保存</button></div>`);
+  setTimeout(()=>document.getElementById('plan-content').focus(),50);
 }
-function rmMealRow(i){const el=document.getElementById('meal_'+i);if(el)el.remove();}
 
 function savePlan(planId){
   const date=document.getElementById('plan-date').value;
   if(!date)return alert('日付を入力してください');
-  const meals=[];
-  document.querySelectorAll('[id^="meal_"]').forEach(el=>{
-    const i=el.id.replace('meal_','');
-    if(isNaN(i))return;
-    const label=(document.getElementById('meal_lbl_'+i)||{}).value||'';
-    const content=(document.getElementById('meal_txt_'+i)||{}).value||'';
-    if(label)meals.push({id:'m'+i,label,content});
-  });
+  const content=document.getElementById('plan-content').value;
   if(planId){
     const plan=S.mealPlans.find(x=>x.id===planId);
-    if(plan)Object.assign(plan,{date,meals});
+    if(plan)Object.assign(plan,{date,content});
   } else {
-    S.mealPlans.push({id:'p'+(planNid++)+Date.now(),date,meals});
+    S.mealPlans.push({id:'p'+(planNid++)+Date.now(),date,content});
   }
   closeSheet();renderPlan();saveData();
 }
@@ -1375,10 +1352,10 @@ function deletePlan(planId){
 }
 // ===== 献立プラン機能ここまで =====
 
-function addToWaitList(name){
+function addToWaitList(name,recipeId){
   if(S.waitingMenu.find(x=>x.name===name&&!x.checked)){toast('すでにリストにあります');return;}
-  S.waitingMenu.push({id:Date.now(),name,checked:false});
-  saveData();toast(`「${name}」を献立待機リストに追加しました`);
+  S.waitingMenu.push({id:Date.now(),name,recipeId:recipeId||null,checked:false});
+  saveData();toast(`「${name}」を作るリストに追加しました`);
 }
 function addWaitManual(){
   showSheet(`<h3>メニューを追加</h3>
@@ -1437,8 +1414,36 @@ function renderWait(){
   h+='</div>';
   document.getElementById('wait-c').innerHTML=h;
 }
+const waitOpen={};
+function toggleWaitDetail(id){waitOpen[id]=!waitOpen[id];renderWait();}
 function waitItemHtml(it){
-  return`<div class="si ${it.checked?'chk':''}"><input type="checkbox" ${it.checked?'checked':''} onchange="toggleWait('${it.id}')"><span class="si-name" style="flex:1">${it.name}</span><button class="icb del" onclick="rmWait('${it.id}')"><i class="bi bi-x-lg"></i></button></div>`;
+  const r=it.recipeId?S.recipes.find(x=>x.id===it.recipeId):null;
+  const isOpen=waitOpen[it.id];
+  if(r){
+    // レシピ登録済み→折りたたみあり
+    const ingHtml=renderIngGroups(r,S.inventory);
+    const stepHtml=renderStepGroups(r);
+    return`<div style="background:#fff;border:.5px solid #e0e0e0;border-radius:10px;margin-bottom:6px;overflow:hidden ${it.checked?';opacity:.5':''}">
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--ac-light)">
+        <input type="checkbox" ${it.checked?'checked':''} onchange="toggleWait('${it.id}')" style="width:18px;height:18px;accent-color:var(--ac-mid);flex-shrink:0;cursor:pointer">
+        <span style="flex:1;font-size:13px;font-weight:500;color:#333;${it.checked?'text-decoration:line-through':''}">${it.name}</span>
+        <button class="icb" onclick="toggleWaitDetail('${it.id}')" style="color:var(--ac-mid)"><i class="bi bi-chevron-${isOpen?'up':'down'}"></i></button>
+        <button class="icb del" onclick="rmWait('${it.id}')"><i class="bi bi-x-lg"></i></button>
+      </div>
+      ${isOpen?`<div style="padding:8px 12px;border-top:.5px solid #e8e8e8">
+        <div class="sbox" style="margin-bottom:6px"><h5>材料</h5>${ingHtml}</div>
+        <div class="sbox"><h5>作り方</h5>${stepHtml}</div>
+      </div>`:''}
+    </div>`;
+  } else {
+    // 手打ち→シンプル表示（薄いボーダー・イタリックで区別）
+    return`<div class="si ${it.checked?'chk':''}" style="border-style:dashed;border-color:#ccc">
+      <input type="checkbox" ${it.checked?'checked':''} onchange="toggleWait('${it.id}')">
+      <i class="bi bi-pencil" style="font-size:11px;color:#bbb;flex-shrink:0"></i>
+      <span class="si-name" style="flex:1;font-style:italic;color:#888">${it.name}</span>
+      <button class="icb del" onclick="rmWait('${it.id}')"><i class="bi bi-x-lg"></i></button>
+    </div>`;
+  }
 }
 function getListText(){const items=S.shopping.filter(x=>!x.checked);return items.length?'🛒 買い物リスト\n'+items.map(x=>`・${x.name}${x.qty?' ('+x.qty+')':''}`).join('\n'):null;}
 function shareToLine(){const t=getListText();if(!t)return alert('買い物リストが空です');window.open('https://line.me/R/msg/text/?'+encodeURIComponent(t),'_blank','noopener');}
