@@ -671,9 +671,22 @@ function updateDmAddAllBtn(){
   const btn=document.getElementById('dm-add-all-btn');
   const lbl=document.getElementById('dm-add-all-label');
   const txt=document.getElementById('dm-sel-txt');
+  const wbtn=document.getElementById('dm-add-to-wait-btn');
+  const wlbl=document.getElementById('dm-add-wait-label');
   const n=dmSelectedRecs.size;
-  if(!n){txt&&(txt.textContent='レシピを選択・献立に追加');lbl&&(lbl.textContent='追加');if(btn)btn.disabled=true;}
-  else{txt&&(txt.textContent=`${n}品のレシピ選択中`);if(missing.length>0){lbl&&(lbl.textContent=`不足 ${missing.length}品を追加`);if(btn)btn.disabled=false;}else{lbl&&(lbl.textContent='食材は揃っています');if(btn)btn.disabled=true;}}
+  if(!n){
+    txt&&(txt.textContent='レシピを選択・献立に追加');
+    lbl&&(lbl.textContent='買い物へ');
+    if(btn)btn.disabled=true;
+    if(wbtn)wbtn.disabled=true;
+    if(wlbl)wlbl.textContent='作るリストへ';
+  } else {
+    txt&&(txt.textContent=`${n}品のレシピ選択中`);
+    if(wbtn)wbtn.disabled=false;
+    if(wlbl)wlbl.textContent=`${n}品を作るリストへ`;
+    if(missing.length>0){lbl&&(lbl.textContent=`不足 ${missing.length}品を買い物へ`);if(btn)btn.disabled=false;}
+    else{lbl&&(lbl.textContent='食材は揃っています');if(btn)btn.disabled=true;}
+  }
 }
 function calcMissingFrom(selSet){
   const needed=new Map();
