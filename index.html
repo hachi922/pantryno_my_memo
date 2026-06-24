@@ -323,7 +323,7 @@ body{display:flex;justify-content:center;align-items:flex-start;min-height:100vh
 <div class="screen" id="screen-rec">
   <div class="lv" id="rec-lv">
     <div class="sbar"><span class="screen-label">レシピ</span><input type="text" id="rec-search" placeholder="レシピを検索..." oninput="renderRec()"></div>
-    <div class="rec-sel-bar"><div class="rec-sel-summary"><span id="rec-sel-txt">レシピを選んで不足食材をまとめて追加</span><button class="add-all-btn" id="add-all-btn" disabled onclick="addAllMissing()"><i class="bi bi-cart-plus"></i><span id="add-all-label">追加</span></button></div></div>
+    <div class="rec-sel-bar"><div class="rec-sel-summary"><span id="rec-sel-txt">レシピを選択・献立に追加</span><button class="add-all-btn" id="add-to-wait-btn" disabled onclick="addSelectedToWait()" style="margin-right:4px"><i class="bi bi-list-check"></i><span id="add-wait-label">作るリストへ</span></button><button class="add-all-btn" id="add-all-btn" disabled onclick="addAllMissing()"><i class="bi bi-cart-plus"></i><span id="add-all-label">買い物へ</span></button></div></div>
     <div class="scroll" id="rec-c"></div>
   </div>
   <div class="dv" id="rec-dv">
@@ -343,7 +343,7 @@ body{display:flex;justify-content:center;align-items:flex-start;min-height:100vh
 <div class="screen" id="screen-dm">
   <div class="lv" id="dm-lv">
     <div class="sbar"><span class="screen-label">糖尿病食</span><input type="text" id="dm-search" placeholder="レシピを検索..." oninput="renderDm()"></div>
-    <div class="rec-sel-bar"><div class="rec-sel-summary"><span id="dm-sel-txt">レシピを選んで不足食材をまとめて追加</span><button class="add-all-btn" id="dm-add-all-btn" disabled onclick="addAllMissingDm()"><i class="bi bi-cart-plus"></i><span id="dm-add-all-label">追加</span></button></div></div>
+    <div class="rec-sel-bar"><div class="rec-sel-summary"><span id="dm-sel-txt">レシピを選択・献立に追加</span><button class="add-all-btn" id="dm-add-to-wait-btn" disabled onclick="addSelectedToWaitDm()" style="margin-right:4px"><i class="bi bi-list-check"></i><span id="dm-add-wait-label">作るリストへ</span></button><button class="add-all-btn" id="dm-add-all-btn" disabled onclick="addAllMissingDm()"><i class="bi bi-cart-plus"></i><span id="dm-add-all-label">買い物へ</span></button></div></div>
     <div class="scroll" id="dm-c"></div>
   </div>
   <div class="dv" id="dm-dv">
@@ -379,7 +379,6 @@ body{display:flex;justify-content:center;align-items:flex-start;min-height:100vh
   <button class="bnav active" id="bnav-inv" onclick="switchTab('inv')" style="display:none"><i class="bi bi-box-seam"></i><span>在庫</span></button>
   <button class="bnav" id="bnav-rec" onclick="switchTab('rec')"><i class="bi bi-journal-richtext"></i><span>レシピ</span></button>
   <button class="bnav" id="bnav-dm" onclick="switchTab('dm')"><i class="bi bi-heart-pulse"></i><span>糖尿病食</span></button>
-  <button class="bnav" id="bnav-menu" onclick="switchTab('menu')"><i class="bi bi-egg-fried"></i><span>献立</span></button>
   <button class="bnav" id="bnav-wait" onclick="switchTab('wait')"><i class="bi bi-list-check"></i><span>作るリスト</span></button>
   <button class="bnav" id="bnav-shop" onclick="switchTab('shop')"><div class="bdg"><i class="bi bi-cart3"></i><span class="bdg-n" id="shop-bdg">0</span></div><span>買い物</span></button>
 </nav>
@@ -520,11 +519,11 @@ function updateShopCount(){const n=S.shopping.filter(x=>!x.checked).length;const
 
 function switchTab(t){
   S.tab=t;
-  ['inv','rec','menu','shop','wait','dm'].forEach(x=>{
+  ['inv','rec','shop','wait','dm'].forEach(x=>{
     const s=document.getElementById('screen-'+x);if(s)s.classList.toggle('active',x===t);
     const b=document.getElementById('bnav-'+x);if(b)b.classList.toggle('active',x===t);
   });
-  const titles={inv:'在庫管理',rec:'レシピ',menu:'献立',shop:'買い物リスト',wait:'作るリスト',dm:'糖尿病食レシピ'};
+  const titles={inv:'在庫管理',rec:'レシピ',shop:'買い物リスト',wait:'作るリスト',dm:'糖尿病食レシピ'};
   document.getElementById('topbar-title').textContent=titles[t]||t;
 
   const showTop=t!=='shop'&&t!=='menu'&&t!=='wait'&&t!=='dm';
@@ -673,7 +672,7 @@ function updateDmAddAllBtn(){
   const lbl=document.getElementById('dm-add-all-label');
   const txt=document.getElementById('dm-sel-txt');
   const n=dmSelectedRecs.size;
-  if(!n){txt&&(txt.textContent='レシピを選んで不足食材をまとめて追加');lbl&&(lbl.textContent='追加');if(btn)btn.disabled=true;}
+  if(!n){txt&&(txt.textContent='レシピを選択・献立に追加');lbl&&(lbl.textContent='追加');if(btn)btn.disabled=true;}
   else{txt&&(txt.textContent=`${n}品のレシピ選択中`);if(missing.length>0){lbl&&(lbl.textContent=`不足 ${missing.length}品を追加`);if(btn)btn.disabled=false;}else{lbl&&(lbl.textContent='食材は揃っています');if(btn)btn.disabled=true;}}
 }
 function calcMissingFrom(selSet){
@@ -681,6 +680,36 @@ function calcMissingFrom(selSet){
   selSet.forEach(rid=>{const r=S.recipes.find(x=>x.id===rid);if(!r)return;allIngs(r).forEach(ing=>{const key=ing.name.toLowerCase();const{num,unit}=parseQty(ing.qty);if(!needed.has(key))needed.set(key,{name:ing.name,byUnit:new Map()});const e=needed.get(key);let ok=false;for(const[u,n]of e.byUnit){if(sameUnit(u,unit)){e.byUnit.set(u,n+(num||0));ok=true;break;}}if(!ok)e.byUnit.set(unit,num||0);});});
   const res=[];needed.forEach((e,key)=>{const inv=S.inventory.find(x=>x.name.toLowerCase()===key);const{num:hN,unit:hU}=inv?parseQty(inv.qty):{num:0,unit:''};e.byUnit.forEach((nN,nU)=>{if(!nN||isNaN(nN)){if(!inv)res.push({name:e.name,displayQty:nU||''});return;}let sh;if(hN&&hN>0&&(sameUnit(hU,nU)||!hU)){sh=nN-hN;}else if(!inv){sh=nN;}else{sh=0;}if(sh>0){const d=Number.isInteger(sh)?sh:parseFloat(sh.toFixed(2));res.push({name:e.name,displayQty:`${d}${nU}`});}});});
   return res;
+}
+function addSelectedToWaitDm(){
+  if(!dmSelectedRecs.size)return;
+  let added=0;
+  dmSelectedRecs.forEach(rid=>{
+    const r=S.recipes.find(x=>x.id===rid);
+    if(!r)return;
+    if(S.waitingMenu.find(x=>x.recipeId===rid&&!x.checked)){return;}
+    S.waitingMenu.push({id:Date.now()+Math.random(),name:r.name,recipeId:rid,checked:false});
+    added++;
+  });
+  if(added>0){saveData();toast(`${added}品を作るリストに追加しました`);}
+  else{toast('すでにリストにあります');}
+  dmSelectedRecs.clear();
+  renderDm();
+}
+function addSelectedToWaitDm(){
+  if(!dmSelectedRecs.size)return;
+  let added=0;
+  dmSelectedRecs.forEach(rid=>{
+    const r=S.recipes.find(x=>x.id===rid);
+    if(!r)return;
+    if(S.waitingMenu.find(x=>x.recipeId===rid&&!x.checked)){return;}
+    S.waitingMenu.push({id:Date.now()+Math.random(),name:r.name,recipeId:rid,checked:false});
+    added++;
+  });
+  if(added>0){saveData();toast(`${added}品を作るリストに追加しました`);}
+  else{toast('すでにリストにあります');}
+  dmSelectedRecs.clear();
+  renderDm();
 }
 function addAllMissingDm(){
   const missing=calcMissingFrom(dmSelectedRecs);if(!missing.length)return;
@@ -741,7 +770,28 @@ function recRowHtml(r){
   </div>`;
 }
 function toggleFolder(ci){folderOpen[ci]=!folderOpen[ci];renderRec();}
-function updateAddAllBtn(){const missing=calcMissing();const btn=document.getElementById('add-all-btn');const lbl=document.getElementById('add-all-label');const txt=document.getElementById('rec-sel-txt');const n=S.selectedRecs.size;if(!n){txt.textContent='レシピを選んで不足食材をまとめて追加';lbl.textContent='追加';btn.disabled=true;}else{txt.textContent=`${n}品のレシピ選択中`;if(missing.length>0){lbl.textContent=`不足 ${missing.length}品を追加`;btn.disabled=false;}else{lbl.textContent='食材は揃っています';btn.disabled=true;}}}
+function updateAddAllBtn(){
+  const missing=calcMissing();
+  const btn=document.getElementById('add-all-btn');
+  const lbl=document.getElementById('add-all-label');
+  const txt=document.getElementById('rec-sel-txt');
+  const wbtn=document.getElementById('add-to-wait-btn');
+  const wlbl=document.getElementById('add-wait-label');
+  const n=S.selectedRecs.size;
+  if(!n){
+    txt.textContent='レシピを選択・献立に追加';
+    lbl.textContent='買い物へ';
+    btn.disabled=true;
+    if(wbtn)wbtn.disabled=true;
+    if(wlbl)wlbl.textContent='作るリストへ';
+  } else {
+    txt.textContent=`${n}品のレシピ選択中`;
+    if(wbtn)wbtn.disabled=false;
+    if(wlbl)wlbl.textContent=`${n}品を作るリストへ`;
+    if(missing.length>0){lbl.textContent=`不足 ${missing.length}品を買い物へ`;btn.disabled=false;}
+    else{lbl.textContent='食材は揃っています';btn.disabled=true;}
+  }
+}
 function toggleRecSel(rid,e){
   e.stopPropagation();
   if(S.selectedRecs.has(rid))S.selectedRecs.delete(rid);else S.selectedRecs.add(rid);
@@ -753,6 +803,21 @@ function toggleRecSel(rid,e){
     if(chk){chk.className='rec-check '+(isSel?'checked':'');chk.innerHTML=isSel?'<i class="bi bi-check"></i>':'';}
   }
   updateAddAllBtn();
+}
+function addSelectedToWait(){
+  if(!S.selectedRecs.size)return;
+  let added=0;
+  S.selectedRecs.forEach(rid=>{
+    const r=S.recipes.find(x=>x.id===rid);
+    if(!r)return;
+    if(S.waitingMenu.find(x=>x.recipeId===rid&&!x.checked)){return;}
+    S.waitingMenu.push({id:Date.now()+Math.random(),name:r.name,recipeId:rid,checked:false});
+    added++;
+  });
+  if(added>0){saveData();toast(`${added}品を作るリストに追加しました`);}
+  else{toast('すでにリストにあります');}
+  S.selectedRecs.clear();
+  renderRec();
 }
 function addAllMissing(){const missing=calcMissing();if(!missing.length)return;missing.forEach(m=>{const key=m.name.toLowerCase();if(!S.shopping.find(x=>x.name.toLowerCase()===key))S.shopping.push({id:Date.now()+Math.random(),name:m.name,qty:m.displayQty,checked:false});});updateBadge();toast(`${missing.length}品を買い物リストに追加しました`);S.selectedRecs.clear();renderRec();saveData();}
 
