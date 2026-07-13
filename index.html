@@ -309,7 +309,7 @@ body{display:flex;justify-content:center;align-items:flex-start;min-height:100vh
 <div class="screen" id="screen-rec">
   <div class="lv" id="rec-lv">
     <div class="sbar"><span class="screen-label">レシピ</span><input type="text" id="rec-search" placeholder="レシピを検索..." oninput="renderRec()"></div>
-    <div class="rec-sel-bar"><div class="rec-sel-summary"><span id="rec-sel-txt">レシピを選択・献立に追加</span><button class="add-all-btn" id="add-to-wait-btn" disabled onclick="addSelectedToWait()" style="margin-right:4px"><i class="bi bi-list-check"></i><span id="add-wait-label">作るリストへ</span></button><button class="add-all-btn" id="add-all-btn" disabled onclick="addAllMissing()"><i class="bi bi-cart-plus"></i><span id="add-all-label">買い物へ</span></button></div></div>
+    <div class="rec-sel-bar"><div class="rec-sel-summary"><span id="rec-sel-txt">レシピを選択して作るリストへ追加</span><button class="add-all-btn" id="add-to-wait-btn" disabled onclick="addSelectedToWait()"><i class="bi bi-list-check"></i><span id="add-wait-label">作るリストへ</span></button></div></div>
     <div class="scroll" id="rec-c"></div>
   </div>
   <div class="dv" id="rec-dv">
@@ -506,7 +506,7 @@ function openCatManage(){catManageSheet('rec');}
 function toggleRecFavFolder(){folderOpen['fav']=folderOpen['fav']===false?true:false;renderRec();}
 function toggleRecFav(id,e){e.stopPropagation();const r=S.recipes.find(x=>x.id===id);if(r){r.fav=!r.fav;renderRec();saveData();}}
 function recRowHtml(r){
-  const isSel=S.selectedRecs.has(r.id);const mc=missingCount(r);const fav=r.fav?'on':'';
+  const isSel=S.selectedRecs.has(r.id);const fav=r.fav?'on':'';
   return `<div class="rec-row" id="rec-row-${r.id}">
     <div class="rec-check ${isSel?'checked':''}" onclick="toggleRecSel(${r.id},event)">${isSel?'<i class="bi bi-check"></i>':''}</div>
     <div class="rec-row-body" onclick="openDetail(${r.id})">
@@ -526,25 +526,18 @@ function recRowHtml(r){
 }
 function toggleFolder(ci){folderOpen[ci]=!folderOpen[ci];renderRec();}
 function updateAddAllBtn(){
-  const missing=calcMissing();
-  const btn=document.getElementById('add-all-btn');
-  const lbl=document.getElementById('add-all-label');
-  const txt=document.getElementById('rec-sel-txt');
   const wbtn=document.getElementById('add-to-wait-btn');
   const wlbl=document.getElementById('add-wait-label');
+  const txt=document.getElementById('rec-sel-txt');
   const n=S.selectedRecs.size;
   if(!n){
-    txt.textContent='レシピを選択・献立に追加';
-    lbl.textContent='買い物へ';
-    btn.disabled=true;
+    txt&&(txt.textContent='レシピを選択して作るリストへ追加');
     if(wbtn)wbtn.disabled=true;
     if(wlbl)wlbl.textContent='作るリストへ';
   } else {
-    txt.textContent=`${n}品のレシピ選択中`;
+    txt&&(txt.textContent=`${n}品のレシピ選択中`);
     if(wbtn)wbtn.disabled=false;
     if(wlbl)wlbl.textContent=`${n}品を作るリストへ`;
-    if(missing.length>0){lbl.textContent=`不足 ${missing.length}品を買い物へ`;btn.disabled=false;}
-    else{lbl.textContent='食材は揃っています';btn.disabled=true;}
   }
 }
 function toggleRecSel(rid,e){
@@ -603,13 +596,11 @@ function renderRec(){
     if(!items.length)return;
     any=true;
     const isOpen=folderOpen[ci]!==false;
-    const totalMiss=items.reduce((s,r)=>s+missingCount(r),0);
     html+=`<div class="folder"><div class="folder-header fhc" onclick="toggleFolder(${ci})">
       <i class="folder-icon bi ${isOpen?'bi-folder2-open':'bi-folder2'}"></i>
       <span class="folder-name">${cat}</span>
       <div class="folder-meta">
-        <span class="folder-count">${items.length}品</span>
-        ${totalMiss>0?`<span class="miss-badge">不足 ${totalMiss}品</span>`:`<span class="miss-badge ok">◎</span>`}
+
       </div>
       <div class="folder-acts" onclick="e=>e.stopPropagation()">
         <button class="icb" onclick="openRecSheet(0,${ci});event.stopPropagation()"><i class="bi bi-plus-lg"></i></button>
@@ -915,7 +906,6 @@ function renderMenu(){
     const ingHtml=renderIngGroups(r);
     const groups=r.stepGroups||normalizeStepGroups(r.steps||[]);let gn=1;
     const steps=groups.map(grp=>{const hasLabel=grp.label&&grp.label.trim();let h='';if(hasLabel)h+=`<div style="font-size:11px;font-weight:600;color:var(--ac-dark);background:var(--ac-light);padding:1px 8px;border-radius:5px;display:inline-block;margin-bottom:4px">${grp.label}</div><div style="padding-left:8px;border-left:2px solid var(--ac-light)">`;(grp.steps||[]).forEach(s=>{h+=`<div class="step"><span class="step-n">${gn++}</span><span>${s}</span></div>`;});if(hasLabel)h+='</div>';return h;}).join('');
-    const missCount=missingCount(r);
     html+=`<div class="menu-plan-card">
       <div class="menu-plan-header fhc" onclick="toggleMenuCard(${rid})">
         <div class="menu-plan-title">
