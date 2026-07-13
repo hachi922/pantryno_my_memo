@@ -31,10 +31,8 @@ function _loadFromFirestore(user){
   ref.get().then(snap=>{
     if(snap.exists){
       const d=snap.data();
-      if(d.invCats)S.invCats=d.invCats;
-      if(d.recCats)S.recCats=d.recCats;
-      if(d.inventory)S.inventory=d.inventory;
-      if(d.recipes){
+        if(d.recCats)S.recCats=d.recCats;
+        if(d.recipes){
         S.recipes=d.recipes;
         S.recipes.forEach(r=>{
           if(r.ings&&!r.ingGroups){r.ingGroups=[{label:'',ings:r.ings}];delete r.ings;}
@@ -49,8 +47,7 @@ function _loadFromFirestore(user){
       S.nid=Math.max(20,...S.inventory.map(x=>x.id||0))+1;
       S.nrid=Math.max(10,...S.recipes.map(x=>x.id||0))+1;
       S.recCats.forEach((_,i)=>folderOpen[i]=false);
-      S.invCats.forEach((_,i)=>invFolderOpen[i]=true);
-      applyTheme();renderInv();renderRec();renderShop();renderMenu();updateBadge();
+          applyTheme();renderRec();renderShop();updateBadge();
       toast('クラウドからデータを読み込みました');
     } else {
       toast('初回ログイン：データを保存します');
@@ -61,7 +58,7 @@ function _loadFromFirestore(user){
     if(!window._fbUid)return;
     const ref=_db.collection('users').doc(window._fbUid).collection('data').doc('main');
     ref.set({
-      invCats:S.invCats,recCats:S.recCats,
+      recCats:S.recCats,
       inventory:S.inventory,recipes:S.recipes,
       shopping:S.shopping,cfg:CFG
     }).catch(e=>console.warn('Firestore write error:',e));
@@ -311,15 +308,6 @@ body{display:flex;justify-content:center;align-items:flex-start;min-height:100vh
   <button class="ib" onclick="openCfg()"><i class="bi bi-gear"></i></button>
 </div>
 
-<div class="screen active" id="screen-inv">
-  <div class="sbar-inv">
-    <span class="screen-label">在庫</span>
-    <input type="text" id="inv-search" placeholder="食材／食品を検索" oninput="renderInv()">
-    <select id="inv-cf" onchange="renderInv()"><option value="">すべてのカテゴリ</option></select>
-  </div>
-  <div class="scroll" id="inv-c"></div>
-</div>
-
 <div class="screen" id="screen-rec">
   <div class="lv" id="rec-lv">
     <div class="sbar"><span class="screen-label">レシピ</span><input type="text" id="rec-search" placeholder="レシピを検索..." oninput="renderRec()"></div>
@@ -339,17 +327,6 @@ body{display:flex;justify-content:center;align-items:flex-start;min-height:100vh
     <button class="shop-add-btn" onclick="openPlanSheet(null)"><i class="bi bi-plus-lg"></i>日付を追加</button>
   </div>
   <div class="scroll" id="plan-c"></div>
-</div>
-<div class="screen" id="screen-dm">
-  <div class="lv" id="dm-lv">
-    <div class="sbar"><span class="screen-label">糖尿病食</span><input type="text" id="dm-search" placeholder="レシピを検索..." oninput="renderDm()"></div>
-    <div class="rec-sel-bar"><div class="rec-sel-summary"><span id="dm-sel-txt">レシピを選択・献立に追加</span><button class="add-all-btn" id="dm-add-to-wait-btn" disabled onclick="addSelectedToWaitDm()" style="margin-right:4px"><i class="bi bi-list-check"></i><span id="dm-add-wait-label">作るリストへ</span></button><button class="add-all-btn" id="dm-add-all-btn" disabled onclick="addAllMissingDm()"><i class="bi bi-cart-plus"></i><span id="dm-add-all-label">買い物へ</span></button></div></div>
-    <div class="scroll" id="dm-c"></div>
-  </div>
-  <div class="dv" id="dm-dv">
-    <div class="sbar" style="gap:8px"><button class="btn" style="height:30px" onclick="closeDmDetail()"><i class="bi bi-arrow-left"></i>戻る</button><div style="flex:1"></div><button class="btn s" id="dm-det-edit"><i class="bi bi-pencil"></i>編集</button><button class="btn s d" id="dm-det-del"><i class="bi bi-trash"></i></button></div>
-    <div class="scroll" id="dm-dc"></div>
-  </div>
 </div>
 <div class="screen" id="screen-menu">
   <div style="background:var(--ac-light);border-bottom:0.5px solid #e0e0e0;padding:8px 12px;flex-shrink:0;display:flex;align-items:center;gap:8px">
@@ -376,9 +353,7 @@ body{display:flex;justify-content:center;align-items:flex-start;min-height:100vh
   <div class="scroll" id="wait-c"></div>
 </div>
 <nav class="bottomnav">
-  <button class="bnav active" id="bnav-inv" onclick="switchTab('inv')" style="display:none"><i class="bi bi-box-seam"></i><span>在庫</span></button>
   <button class="bnav" id="bnav-rec" onclick="switchTab('rec')"><i class="bi bi-journal-richtext"></i><span>レシピ</span></button>
-  <button class="bnav" id="bnav-dm" onclick="switchTab('dm')"><i class="bi bi-heart-pulse"></i><span>糖尿病食</span></button>
   <button class="bnav" id="bnav-wait" onclick="switchTab('wait')"><i class="bi bi-list-check"></i><span>作るリスト</span></button>
   <button class="bnav" id="bnav-shop" onclick="switchTab('shop')"><div class="bdg"><i class="bi bi-cart3"></i><span class="bdg-n" id="shop-bdg">0</span></div><span>買い物</span></button>
 </nav>
@@ -429,7 +404,7 @@ function loadData(){try{const r=localStorage.getItem(STORAGE_KEY);return r?JSON.
 function saveData(){
   try{
     localStorage.setItem(STORAGE_KEY,JSON.stringify({
-      invCats:S.invCats,recCats:S.recCats,inventory:S.inventory,
+      recCats:S.recCats,
       recipes:S.recipes,shopping:S.shopping,waitingMenu:S.waitingMenu,cfg:CFG
     }));
   }catch(e){console.warn(e);}
@@ -482,9 +457,7 @@ function parseQty(s){if(!s)return{num:null,unit:''};const m=s.match(/^([\d.]+)\s
 function sameUnit(a,b){const n=s=>s.replace(/個|ケ|ヶ/g,'個').replace(/本|束/g,'本').trim();return n(a)===n(b);}
 
 const S={
-  invCats:['野菜・果物','肉・魚','乳製品・卵','調味料','缶詰・乾物','冷凍食品','その他'],
   recCats:['和食','洋食','中華','麺類','スープ','デザート','その他'],
-  inventory:[],
   recipes:[],
   shopping:[],waitingMenu:[],mealPlans:[],selectedRecs:new Set(),nid:1,nrid:1,tab:'rec',curRec:null
 };
@@ -492,7 +465,6 @@ const S={
 (function init(){
   const saved=loadData();
   if(saved){
-    if(saved.invCats)S.invCats=saved.invCats;
     if(saved.recCats)S.recCats=saved.recCats;
     if(saved.inventory)S.inventory=saved.inventory;
     if(saved.recipes){
@@ -507,67 +479,39 @@ const S={
     S.nrid=Math.max(10,...S.recipes.map(x=>x.id||0))+1;
   }
   S.recCats.forEach((_,i)=>folderOpen[i]=false);
-  S.invCats.forEach((_,i)=>invFolderOpen[i]=true);
 })();
 
 function allIngs(r){return r.ingGroups.flatMap(g=>g.ings);}
-function calcMissing(){const needed=new Map();S.selectedRecs.forEach(rid=>{const r=S.recipes.find(x=>x.id===rid);if(!r)return;allIngs(r).forEach(ing=>{const key=ing.name.toLowerCase();const{num,unit}=parseQty(ing.qty);if(!needed.has(key))needed.set(key,{name:ing.name,byUnit:new Map()});const e=needed.get(key);let ok=false;for(const[u,n]of e.byUnit){if(sameUnit(u,unit)){e.byUnit.set(u,n+(num||0));ok=true;break;}}if(!ok)e.byUnit.set(unit,num||0);});});const res=[];needed.forEach((e,key)=>{const inv=S.inventory.find(x=>x.name.toLowerCase()===key);const{num:hN,unit:hU}=inv?parseQty(inv.qty):{num:0,unit:''};e.byUnit.forEach((nN,nU)=>{if(!nN||isNaN(nN)){if(!inv)res.push({name:e.name,displayQty:nU||''});return;}let sh;if(hN&&hN>0&&(sameUnit(hU,nU)||!hU)){sh=nN-hN;}else if(!inv){sh=nN;}else{sh=0;}if(sh>0){const d=Number.isInteger(sh)?sh:parseFloat(sh.toFixed(2));res.push({name:e.name,displayQty:`${d}${nU}`});}});});return res;}
-function missingCount(r){let c=0;allIngs(r).forEach(ing=>{const key=ing.name.toLowerCase();const inv=S.inventory.find(x=>x.name.toLowerCase()===key);const{num:nN,unit:nU}=parseQty(ing.qty);if(!inv){c++;return;}if(!nN||isNaN(nN))return;const{num:hN,unit:hU}=parseQty(inv.qty);if(hN&&hN>0&&sameUnit(hU,nU)&&nN>hN)c++;});return c;}
+function calcMissing(){return [];}
+function missingCount(r){return 0;}
 function shopNames(){return new Set(S.shopping.map(x=>x.name.toLowerCase()));}
 function updateBadge(){const n=S.shopping.filter(x=>!x.checked).length;const b=document.getElementById('shop-bdg');b.style.display=n?'block':'none';b.textContent=n;}
 function updateShopCount(){const n=S.shopping.filter(x=>!x.checked).length;const el=document.getElementById('shop-count');if(el)el.textContent=n>0?`未購入 ${n}品`:'リストは空です';}
 
 function switchTab(t){
   S.tab=t;
-  ['inv','rec','shop','wait','dm'].forEach(x=>{
+  ['rec','shop','wait'].forEach(x=>{
     const s=document.getElementById('screen-'+x);if(s)s.classList.toggle('active',x===t);
     const b=document.getElementById('bnav-'+x);if(b)b.classList.toggle('active',x===t);
   });
-  const titles={inv:'在庫管理',rec:'レシピ',shop:'買い物リスト',wait:'作るリスト',dm:'糖尿病食レシピ'};
+  const titles={rec:'レシピ',shop:'買い物リスト',wait:'作るリスト'};
   document.getElementById('topbar-title').textContent=titles[t]||t;
 
-  const showTop=t!=='shop'&&t!=='menu'&&t!=='wait'&&t!=='dm';
+  const showTop=t!=='shop'&&t!=='menu'&&t!=='wait';
   document.getElementById('cat-btn').style.display=showTop?'flex':'none';
   document.getElementById('add-btn').style.display=showTop?'flex':'none';
-  if(t==='inv')renderInv();
   if(t==='rec')renderRec();
   if(t==='menu')renderMenu();
   if(t==='shop')renderShop();
   if(t==='wait')renderWait();
-  if(t==='dm'){renderDm();}
 }
 function handleAdd(){S.tab==='inv'?openItemSheet():openRecSheet();}
 function openCatManage(){catManageSheet(S.tab==='inv'?'inv':'rec');}
 
-function toggleInvFolder(ci){invFolderOpen[ci]=!invFolderOpen[ci];renderInv();}
-function renderInv(){
-  const q=document.getElementById('inv-search').value.toLowerCase();
-  const cf=document.getElementById('inv-cf').value;
-  const sel=document.getElementById('inv-cf');const pv=sel.value;
-  sel.innerHTML='<option value="">すべてのカテゴリ</option>';
-  S.invCats.forEach((c,i)=>sel.innerHTML+=`<option value="${i}">${c}</option>`);
-  sel.value=pv;
-  let html='';
-  // ★よく使う セクション
-  const favItems=S.inventory.filter(it=>it.fav&&it.name.toLowerCase().includes(q)&&(cf===''||parseInt(cf)===it.ci));
-  if(favItems.length){
-    const isOpen=invFolderOpen['fav']!==false;
-    html+=`<div class="fav-section"><div class="fav-section-header fhc" onclick="toggleInvFavFolder()">
-      <span style="font-size:16px">⭐</span>
-      <span class="fav-section-title">よく使う</span>
-      <span class="fav-count">${favItems.length}品</span>
-      <i class="bi bi-chevron-right inv-folder-chevron ${isOpen?'open':''}"></i>
-    </div>`;
-    if(isOpen){
-      html+=`<div style="padding:6px 10px 8px"><div class="inv-grid">`;
-      favItems.forEach(it=>{html+=icardHtml(it);});
-      html+=`</div></div>`;
-    }
     html+=`</div>`;
   }
   // カテゴリフォルダ
   let any=false;
-  S.invCats.forEach((cat,ci)=>{
     if(cf!==''&&parseInt(cf)!==ci)return;
     const items=S.inventory.filter(it=>it.ci===ci&&it.name.toLowerCase().includes(q));
     if(!items.length)return;
@@ -587,148 +531,34 @@ function renderInv(){
     html+=`</div>`;
   });
   if(!favItems.length&&!any)html='<div class="em"><i class="bi bi-box-seam"></i>食材が見つかりません</div>';
-  document.getElementById('inv-c').innerHTML=html;updateBadge();
 }
-function toggleInvFavFolder(){invFolderOpen['fav']=invFolderOpen['fav']===false?true:false;renderInv();}
-function icardHtml(it){
-  const ic=shopNames().has(it.name.toLowerCase());
-  const fav=it.fav?'on':'';
-  return `<div class="icard"><div class="icard-top"><span class="icard-name">${it.name}</span>${it.exp?`<span class="icard-exp">${fmtDate(it.exp)}</span>`:''}</div><div class="icard-bottom"><span class="icard-qty">${it.qty}</span><div style="display:flex;align-items:center;gap:2px"><button class="star-btn ${fav}" onclick="toggleInvFav(${it.id})" title="よく使う">★</button><div class="icard-acts"><button class="icb" onclick="openItemSheet(${it.id})"><i class="bi bi-pencil"></i></button><button class="icb del" onclick="delItem(${it.id})"><i class="bi bi-trash"></i></button></div><button class="cart-icb ${ic?'in':''}" onclick="toggleCart(${it.id})"><i class="bi bi-cart-plus"></i></button></div></div></div>`;
-}
-function toggleInvFav(id){const it=S.inventory.find(x=>x.id===id);if(it){it.fav=!it.fav;renderInv();saveData();}}
-function toggleCart(id){const it=S.inventory.find(x=>x.id===id);const nm=it.name.toLowerCase();const idx=S.shopping.findIndex(x=>x.name.toLowerCase()===nm);if(idx>=0)S.shopping.splice(idx,1);else S.shopping.push({id:Date.now(),name:it.name,qty:it.qty,checked:false});renderInv();updateBadge();saveData();}
-function openItemSheet(id){const it=id?S.inventory.find(x=>x.id===id):null;const opts=S.invCats.map((c,i)=>`<option value="${i}"${it&&it.ci===i?' selected':''}>${c}</option>`).join('');showSheet(`<h3>${it?'食材を編集':'食材を追加'}</h3><div><label>食材名</label><input type="text" id="m-n" value="${it?it.name:''}"></div><div><label>数量・単位</label><input type="text" id="m-q" placeholder="例: 3個、200g" value="${it?it.qty:''}"></div><div><label>カテゴリ</label><select id="m-ci">${opts}</select></div><div><label>賞味期限（任意）</label><input type="date" id="m-exp" value="${it&&it.exp?it.exp:''}"></div><div class="sf">${it?`<button class="btn d" onclick="delItem(${it.id});closeSheet()"><i class="bi bi-trash"></i>削除</button>`:''}<button class="btn" onclick="closeSheet()">キャンセル</button><button class="btn p" onclick="saveItem(${id||0})">保存</button></div>`);setTimeout(()=>document.getElementById('m-n').focus(),50);}
-function saveItem(id){const name=document.getElementById('m-n').value.trim();const qty=document.getElementById('m-q').value.trim();const ci=parseInt(document.getElementById('m-ci').value);const exp=document.getElementById('m-exp').value;if(!name)return alert('食材名を入力してください');if(id){const it=S.inventory.find(x=>x.id===id);Object.assign(it,{name,qty,ci,exp});}else S.inventory.push({id:S.nid++,name,qty,ci,exp});closeSheet();renderInv();saveData();}
-function delItem(id){if(!confirm('削除しますか？'))return;S.inventory=S.inventory.filter(x=>x.id!==id);renderInv();saveData();}
 
-function setRtype(t){
-  ['normal','dm'].forEach(k=>{
-    const btn=document.getElementById('rtype-'+k);
-    if(btn)btn.classList.toggle('on',k===t);
+
+// </div>`;
   });
-}
-
-// 糖尿病食タブ用（レシピタブと同じ構造）
-let dmSelectedRecs=new Set();
-let dmFolderOpen={};
-
-function renderDm(){
-  const q=document.getElementById('dm-search').value.toLowerCase();
-  // 糖尿病食レシピのみ
-  const dmRecipes=S.recipes.filter(r=>r.rtype==='dm');
-  updateDmAddAllBtn();
-  let html='<div style="padding-bottom:8px">',any=false;
-  S.recCats.forEach((cat,ci)=>{
-    const items=dmRecipes.filter(r=>r.ci===ci&&(r.name.toLowerCase().includes(q)||allIngs(r).some(ing=>ing.name.toLowerCase().includes(q))));
-    if(!items.length)return;
-    any=true;
-    const isOpen=dmFolderOpen[ci]!==false;
-    html+=`<div class="folder"><div class="folder-header fhc" onclick="toggleDmFolder(${ci})">
-      <i class="folder-icon bi ${isOpen?'bi-folder2-open':'bi-folder2'}"></i>
-      <span class="folder-name">${cat}</span>
-      <div class="folder-meta"><span class="folder-count">${items.length}品</span></div>
-      <i class="folder-chevron bi bi-chevron-right ${isOpen?'open':''}"></i>
-    </div>`;
-    if(isOpen){
-      html+=`<div class="folder-body">`;
-      items.forEach(r=>{html+=dmRowHtml(r);});
-      html+=`</div>`;
-    }
-    html+=`</div>`;
-  });
-  if(!any)html='<div class="em"><i class="bi bi-heart-pulse"></i>'+(q?`「${q}」が見つかりません`:'糖尿病食レシピがありません')+'<br><button class="btn p" style="margin-top:12px" onclick="openRecSheet()" >レシピを追加</button></div>';
+  if(!any)html='<div class="em"><i class="bi bi-heart-pulse"></i>'+(q?`「${q}」が見つかりません`:'<br><button class="btn p" style="margin-top:12px" onclick="openRecSheet()" >レシピを追加</button></div>';
   html+='</div>';
   document.getElementById('dm-c').innerHTML=html;
 }
-function toggleDmFolder(ci){dmFolderOpen[ci]=!dmFolderOpen[ci];renderDm();}
-function dmRowHtml(r){
-  const isSel=dmSelectedRecs.has(r.id);const mc=missingCount(r);const fav=r.fav?'on':'';
-  return `<div class="rec-row" id="dm-row-${r.id}">
-    <div class="rec-check ${isSel?'checked':''}" onclick="toggleDmSel(${r.id},event)">${isSel?'<i class="bi bi-check"></i>':''}</div>
-    <div class="rec-row-body" onclick="openDmDetail(${r.id})">
-      <div style="display:flex;align-items:center;gap:6px">
-        <span class="rec-row-name">${r.name}</span>
-        <span style="font-size:11px;padding:1px 6px;border-radius:8px;white-space:nowrap;${mc>0?'background:#fff3cd;color:#856404':'background:#d4edda;color:#155724'}">${mc>0?`不足${mc}品`:'◎'}</span>
-      </div>
-      ${r.sv?`<div class="rec-row-sv">${r.sv}</div>`:''}
     </div>
     <button class="star-btn ${fav}" onclick="toggleRecFav(${r.id},event)" title="お気に入り">★</button>
     <div class="rec-row-acts">
       <button class="icb" onclick="openRecSheet(${r.id});event.stopPropagation()"><i class="bi bi-pencil"></i></button>
-      <button class="icb del" onclick="if(confirm('削除しますか？')){S.recipes=S.recipes.filter(x=>x.id!==${r.id});dmSelectedRecs.delete(${r.id});renderDm();saveData();}event.stopPropagation()"><i class="bi bi-trash"></i></button>
+      <button class="icb del" onclick="if(confirm('削除しますか？')){S.recipes=S.recipes.filter(x=>x.id!==${r.id});S.selectedRecs.delete(${r.id});renderRec();saveData();}event.stopPropagation()"><i class="bi bi-trash"></i></button>
     </div>
   </div>`;
 }
-function toggleDmSel(rid,e){
-  e.stopPropagation();
-  if(dmSelectedRecs.has(rid))dmSelectedRecs.delete(rid);else dmSelectedRecs.add(rid);
-  const row=document.getElementById('dm-row-'+rid);
-  if(row){const isSel=dmSelectedRecs.has(rid);const chk=row.querySelector('.rec-check');if(chk){chk.className='rec-check '+(isSel?'checked':'');chk.innerHTML=isSel?'<i class="bi bi-check"></i>':'';}}
   updateDmAddAllBtn();
 }
-function updateDmAddAllBtn(){
-  const missing=calcMissingFrom(dmSelectedRecs);
-  const btn=document.getElementById('dm-add-all-btn');
-  const lbl=document.getElementById('dm-add-all-label');
-  const txt=document.getElementById('dm-sel-txt');
-  const wbtn=document.getElementById('dm-add-to-wait-btn');
-  const wlbl=document.getElementById('dm-add-wait-label');
-  const n=dmSelectedRecs.size;
-  if(!n){
-    txt&&(txt.textContent='レシピを選択・献立に追加');
-    lbl&&(lbl.textContent='買い物へ');
-    if(btn)btn.disabled=true;
-    if(wbtn)wbtn.disabled=true;
-    if(wlbl)wlbl.textContent='作るリストへ';
-  } else {
-    txt&&(txt.textContent=`${n}品のレシピ選択中`);
-    if(wbtn)wbtn.disabled=false;
-    if(wlbl)wlbl.textContent=`${n}品を作るリストへ`;
-    if(missing.length>0){lbl&&(lbl.textContent=`不足 ${missing.length}品を買い物へ`);if(btn)btn.disabled=false;}
     else{lbl&&(lbl.textContent='食材は揃っています');if(btn)btn.disabled=true;}
   }
 }
-function calcMissingFrom(selSet){
-  const needed=new Map();
-  selSet.forEach(rid=>{const r=S.recipes.find(x=>x.id===rid);if(!r)return;allIngs(r).forEach(ing=>{const key=ing.name.toLowerCase();const{num,unit}=parseQty(ing.qty);if(!needed.has(key))needed.set(key,{name:ing.name,byUnit:new Map()});const e=needed.get(key);let ok=false;for(const[u,n]of e.byUnit){if(sameUnit(u,unit)){e.byUnit.set(u,n+(num||0));ok=true;break;}}if(!ok)e.byUnit.set(unit,num||0);});});
-  const res=[];needed.forEach((e,key)=>{const inv=S.inventory.find(x=>x.name.toLowerCase()===key);const{num:hN,unit:hU}=inv?parseQty(inv.qty):{num:0,unit:''};e.byUnit.forEach((nN,nU)=>{if(!nN||isNaN(nN)){if(!inv)res.push({name:e.name,displayQty:nU||''});return;}let sh;if(hN&&hN>0&&(sameUnit(hU,nU)||!hU)){sh=nN-hN;}else if(!inv){sh=nN;}else{sh=0;}if(sh>0){const d=Number.isInteger(sh)?sh:parseFloat(sh.toFixed(2));res.push({name:e.name,displayQty:`${d}${nU}`});}});});
-  return res;
-}
-function addSelectedToWaitDm(){
-  if(!dmSelectedRecs.size)return;
-  let added=0;
-  dmSelectedRecs.forEach(rid=>{
-    const r=S.recipes.find(x=>x.id===rid);
-    if(!r)return;
-    if(S.waitingMenu.find(x=>x.recipeId===rid&&!x.checked)){return;}
     S.waitingMenu.push({id:Date.now()+Math.random(),name:r.name,recipeId:rid,checked:false});
     added++;
   });
   if(added>0){saveData();toast(`${added}品を作るリストに追加しました`);}
   else{toast('すでにリストにあります');}
-  dmSelectedRecs.clear();
-  renderDm();
 }
-function addAllMissingDm(){
-  const missing=calcMissingFrom(dmSelectedRecs);if(!missing.length)return;
-  missing.forEach(m=>{const key=m.name.toLowerCase();if(!S.shopping.find(x=>x.name.toLowerCase()===key))S.shopping.push({id:Date.now()+Math.random(),name:m.name,qty:m.displayQty,checked:false});});
-  updateBadge();toast(`${missing.length}品を買い物リストに追加しました`);dmSelectedRecs.clear();renderDm();saveData();
-}
-function openDmDetail(id){
-  S.curRec=id;
-  document.getElementById('dm-lv').style.display='none';
-  document.getElementById('dm-dv').classList.add('active');
-  document.getElementById('topbar-title').textContent='レシピ詳細';
-  const r=S.recipes.find(x=>x.id===id);
-  document.getElementById('dm-det-edit').onclick=()=>openRecSheet(id);
-  document.getElementById('dm-det-del').onclick=()=>{if(confirm('削除しますか？')){S.recipes=S.recipes.filter(x=>x.id!==id);dmSelectedRecs.delete(id);closeDmDetail();saveData();}};
-  const ingHtml=renderIngGroups(r,S.inventory);
-  const steps=renderStepGroups(r);
-  document.getElementById('dm-dc').innerHTML=`
-    <div style="margin-bottom:8px">
-      <div style="font-size:19px;font-weight:500;margin-bottom:2px;color:#333">${r.name}</div>
-      <div style="font-size:12px;color:#aaa;margin-bottom:4px">${S.recCats[r.ci]||''}${r.sv?' · '+r.sv:''}</div>
-      ${urlHtml(r)}
     </div>
     <div class="sbox">
       <button class="sbox-toggle" onclick="toggleDetailSection('ing')"><h5>材料</h5><i class="bi bi-chevron-right ${detailOpen.ing?'open':''}"></i></button>
@@ -738,13 +568,6 @@ function openDmDetail(id){
       <button class="sbox-toggle" onclick="toggleDetailSection('step')"><h5>作り方</h5><i class="bi bi-chevron-right ${detailOpen.step?'open':''}"></i></button>
       <div class="sbox-body" id="detail-step" style="display:${detailOpen.step?'block':'none'}">${steps}</div>
     </div>`;
-}
-function closeDmDetail(){
-  S.curRec=null;
-  document.getElementById('dm-lv').style.display='flex';
-  document.getElementById('dm-dv').classList.remove('active');
-  document.getElementById('topbar-title').textContent='糖尿病食レシピ';
-  renderDm();
 }
 function toggleRecFavFolder(){folderOpen['fav']=folderOpen['fav']===false?true:false;renderRec();}
 function toggleRecFav(id,e){e.stopPropagation();const r=S.recipes.find(x=>x.id===id);if(r){r.fav=!r.fav;renderRec();saveData();}}
@@ -888,16 +711,13 @@ function renderStepGroups(r){
   });
   return html;
 }
-function renderIngGroups(r,inv){
+function renderIngGroups(r){
   let html='';
-  r.ingGroups.forEach(grp=>{
+  (r.ingGroups||[]).forEach(grp=>{
     const hasLabel=grp.label&&grp.label.trim();
     if(hasLabel)html+=`<div class="ing-group"><div class="ing-group-label">${grp.label}</div><div class="ing-group-rows">`;
-    grp.ings.forEach(ing=>{
-      const key=ing.name.toLowerCase();const invItem=inv?inv.find(x=>x.name.toLowerCase()===key):null;
-      const{num:nN,unit:nU}=parseQty(ing.qty);let sh=false;
-      if(inv){if(!invItem){sh=true;}else if(nN&&!isNaN(nN)){const{num:hN,unit:hU}=parseQty(invItem.qty);if(hN&&sameUnit(hU,nU)&&nN>hN)sh=true;}}
-      html+=`<div class="ir${sh?' miss':''}"><span>${ing.name}${sh?'<i class="bi bi-exclamation-triangle" style="font-size:11px;margin-left:3px"></i>':''}</span><span>${ing.qty}</span></div>`;
+    (grp.ings||[]).forEach(ing=>{
+      html+=`<div class="ir"><span>${ing.name}</span><span>${ing.qty}</span></div>`;
     });
     if(hasLabel)html+=`</div></div>`;
   });
@@ -915,7 +735,7 @@ function openDetail(id){
   const r=S.recipes.find(x=>x.id===id);
   document.getElementById('det-edit').onclick=()=>openRecSheet(id);
   document.getElementById('det-del').onclick=()=>{if(confirm('削除しますか？')){S.recipes=S.recipes.filter(x=>x.id!==id);S.selectedRecs.delete(id);closeDetail();saveData();}};
-  const ingHtml=renderIngGroups(r,S.inventory);
+  const ingHtml=renderIngGroups(r);
   const steps=renderStepGroups(r);
   document.getElementById('rec-dc').innerHTML=`
     <div style="margin-bottom:8px">
@@ -1060,8 +880,7 @@ function openRecSheet(id,defaultCi){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
       <div style="grid-column:1/-1"><label>レシピ名</label><input type="text" id="rn" value="${r?r.name:''}"></div>
       <div><label>フォルダ</label><select id="rci">${opts}</select></div>
-      <div><label>人数</label><input type="text" id="rsv" placeholder="2人分" value="${r?r.sv:''}"></div>
-      <div style="grid-column:1/-1"><label>種別</label><div class="seg"><button type="button" class="seg-btn ${(!r||r.rtype!=='dm')?'on':''}" id="rtype-normal" onclick="setRtype('normal')">通常レシピ</button><button type="button" class="seg-btn ${(r&&r.rtype==='dm')?'on':''}" id="rtype-dm" onclick="setRtype('dm')">糖尿病食</button></div></div>
+      <div><label>人数</label><input type="text" id="rsv" placeholder="2人分" value="${r?r.sv:''}"></div></div>
       <div style="grid-column:1/-1"><label>参考URL（任意）</label><input type="url" id="rurl" placeholder="https://..." value="${r?r.url||'':''}"></div>
     </div>
     <div>
@@ -1141,9 +960,8 @@ function saveRec(id){
     if(steps.length)stepGroups.push({label:label.trim(),steps});
   });
   if(!stepGroups.length)stepGroups.push({label:'',steps:[]});
-  const rtype=document.getElementById('rtype-dm')&&document.getElementById('rtype-dm').classList.contains('on')?'dm':'normal';
-  if(id){const r=S.recipes.find(x=>x.id===id);Object.assign(r,{name,ci,sv,url,ingGroups,stepGroups,rtype});delete r.steps;}
-  else{S.recipes.push({id:S.nrid++,name,ci,sv,url,ingGroups,stepGroups,rtype});folderOpen[ci]=true;}
+  if(id){const r=S.recipes.find(x=>x.id===id);Object.assign(r,{name,ci,sv,url,ingGroups,stepGroups});delete r.steps;}
+  else{S.recipes.push({id:S.nrid++,name,ci,sv,url,ingGroups,stepGroups});folderOpen[ci]=true;}
   closeSheet();
   if(S.curRec===id&&id)openDetail(id);else closeDetail();
   saveData();
@@ -1160,7 +978,7 @@ function renderMenu(){
     // 初回は開いた状態
     if(menuOpen[rid]===undefined)menuOpen[rid]=true;
     const isOpen=menuOpen[rid];
-    const ingHtml=renderIngGroups(r,S.inventory);
+    const ingHtml=renderIngGroups(r);
     const groups=r.stepGroups||normalizeStepGroups(r.steps||[]);let gn=1;
     const steps=groups.map(grp=>{const hasLabel=grp.label&&grp.label.trim();let h='';if(hasLabel)h+=`<div style="font-size:11px;font-weight:600;color:var(--ac-dark);background:var(--ac-light);padding:1px 8px;border-radius:5px;display:inline-block;margin-bottom:4px">${grp.label}</div><div style="padding-left:8px;border-left:2px solid var(--ac-light)">`;(grp.steps||[]).forEach(s=>{h+=`<div class="step"><span class="step-n">${gn++}</span><span>${s}</span></div>`;});if(hasLabel)h+='</div>';return h;}).join('');
     const missCount=missingCount(r);
@@ -1231,10 +1049,10 @@ function clearChk(){S.shopping=S.shopping.filter(x=>!x.checked);renderShop();sav
 function addManual(){showSheet(`<h3>食材を追加</h3><div><label>食材名</label><input type="text" id="sh-n" placeholder="例: 豆腐、パスタ"></div><div><label>数量・単位（任意）</label><input type="text" id="sh-q" placeholder="例: 1丁、200g"></div><div class="sf"><button class="btn" onclick="closeSheet()">キャンセル</button><button class="btn p" onclick="saveMnl()"><i class="bi bi-plus-lg"></i>追加</button></div>`);setTimeout(()=>document.getElementById('sh-n').focus(),50);}
 function saveMnl(){const n=document.getElementById('sh-n').value.trim();if(!n)return alert('食材名を入力してください');S.shopping.push({id:Date.now(),name:n,qty:document.getElementById('sh-q').value.trim(),checked:false});closeSheet();renderShop();saveData();}
 
-function catManageSheet(type){const cats=type==='inv'?S.invCats:S.recCats;const rows=cats.map((c,i)=>`<div class="cmr"><span style="flex:1">${c}</span><button class="btn s" onclick="editCat('${type}',${i})">変更</button><button class="btn s d" onclick="delCat('${type}',${i})"><i class="bi bi-trash"></i></button></div>`).join('');showSheet(`<h3>カテゴリ管理（${type==='inv'?'在庫':'レシピフォルダ'}）</h3><div style="border:.5px solid #e0e0e0;border-radius:9px;padding:4px 11px;max-height:160px;overflow-y:auto">${rows||'<div style="padding:8px;color:#bbb">なし</div>'}</div><div style="display:flex;gap:6px"><input type="text" id="nc" placeholder="新しいカテゴリ名" style="flex:1"><button class="btn p" onclick="addCat('${type}')"><i class="bi bi-plus-lg"></i>追加</button></div><div class="sf"><button class="btn" onclick="closeSheet()">閉じる</button></div>`);}
-function addCat(t){const n=document.getElementById('nc').value.trim();if(!n)return;const cats=t==='inv'?S.invCats:S.recCats;cats.push(n);if(t==='rec')folderOpen[cats.length-1]=true;document.getElementById('nc').value='';catManageSheet(t);t==='inv'?renderInv():renderRec();saveData();}
-function editCat(t,i){const cats=t==='inv'?S.invCats:S.recCats;const n=prompt('カテゴリ名を変更:',cats[i]);if(!n||!n.trim())return;cats[i]=n.trim();if(document.getElementById('mw').style.display!=='none')catManageSheet(t);t==='inv'?renderInv():renderRec();saveData();}
-function delCat(t,i){const cats=t==='inv'?S.invCats:S.recCats;const items=t==='inv'?S.inventory:S.recipes;const cnt=items.filter(x=>x.ci===i).length;if(cnt>0&&!confirm(`「${cats[i]}」には${cnt}件あります。削除すると「その他」へ移動します。`))return;items.forEach(x=>{if(x.ci===i)x.ci=cats.length-1;else if(x.ci>i)x.ci--;});cats.splice(i,1);if(document.getElementById('mw').style.display!=='none')catManageSheet(t);t==='inv'?renderInv():renderRec();saveData();}
+function catManageSheet(type){const cats=S.recCats;const rows=cats.map((c,i)=>`<div class="cmr"><span style="flex:1">${c}</span><button class="btn s" onclick="editCat('rec',${i})">変更</button><button class="btn s d" onclick="delCat('rec',${i})"><i class="bi bi-trash"></i></button></div>`).join('');showSheet(`<h3>レシピフォルダ管理</h3><div style="border:.5px solid #e0e0e0;border-radius:9px;padding:4px 11px;max-height:160px;overflow-y:auto">${rows||'<div style="padding:8px;color:#bbb">なし</div>'}</div><div style="display:flex;gap:6px"><input type="text" id="nc" placeholder="新しいカテゴリ名" style="flex:1"><button class="btn p" onclick="addCat('rec')"><i class="bi bi-plus-lg"></i>追加</button></div><div class="sf"><button class="btn" onclick="closeSheet()">閉じる</button></div>`);}
+function addCat(t){const n=document.getElementById('nc').value.trim();if(!n)return;S.recCats.push(n);folderOpen[S.recCats.length-1]=true;document.getElementById('nc').value='';catManageSheet(t);renderRec();saveData();}
+function editCat(t,i){const n=prompt('カテゴリ名を変更:',S.recCats[i]);if(!n||!n.trim())return;S.recCats[i]=n.trim();if(document.getElementById('mw').style.display!=='none')catManageSheet(t);renderRec();saveData();}
+function delCat(t,i){const cnt=S.recipes.filter(x=>x.ci===i).length;if(cnt>0&&!confirm(`「${S.recCats[i]}」には${cnt}件あります。削除すると「その他」へ移動します。`))return;S.recipes.forEach(x=>{if(x.ci===i)x.ci=S.recCats.length-1;else if(x.ci>i)x.ci--;});S.recCats.splice(i,1);if(document.getElementById('mw').style.display!=='none')catManageSheet(t);renderRec();saveData();}
 
 function openCfg(){
   const sw=PALETTES.map((p,i)=>{const isWhite=p.isWhite;return`<div class="swatch ${CFG.palette===i?'on':''}" style="background:${p.mid};${isWhite?'border:1.5px solid #ccc':''}" onclick="setCfgPalette(${i})" title="${p.name}">${isWhite?'<i class="bi bi-x" style="font-size:10px;color:#ccc"></i>':''}</div>`;}).join('');
@@ -1266,23 +1084,12 @@ function openCfg(){
 function setCfgPalette(i){CFG.palette=i;applyTheme();document.querySelectorAll('.swatch').forEach((el,j)=>el.classList.toggle('on',j===i));const lbl=document.getElementById('pal-name');if(lbl)lbl.textContent=PALETTES[i].name;saveData();}
 function setCfgTitleTx(v){CFG.titleTx=v;applyTheme();document.querySelectorAll('.seg-btn').forEach(btn=>{const t=btn.textContent.trim();btn.classList.toggle('on',(v==='auto'&&t==='自動')||(v==='white'&&t==='白')||(v==='black'&&t==='黒'));});saveData();}
 function setCfgFs(v){CFG.fs=parseInt(v);applyFontSize(CFG.fs);const p=document.getElementById('cfg-fs-prev');if(p)p.textContent=CFG.fs+'px';saveData();}
-function doExport(){const data=JSON.stringify({invCats:S.invCats,recCats:S.recCats,inventory:S.inventory,recipes:S.recipes,shopping:S.shopping,cfg:CFG},null,2);const blob=new Blob([data],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;const d=new Date();a.download=`Pantryno_backup_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;a.click();URL.revokeObjectURL(url);toast('エクスポートしました');}
-function doImport(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.invCats)S.invCats=d.invCats;if(d.recCats)S.recCats=d.recCats;if(d.inventory)S.inventory=d.inventory;if(d.recipes){S.recipes=d.recipes;S.recipes.forEach(r=>{if(r.ings&&!r.ingGroups){r.ingGroups=[{label:'',ings:r.ings}];delete r.ings;}r.stepGroups=normalizeStepGroups(r.stepGroups||r.steps||[]);delete r.steps;});}if(d.shopping)S.shopping=d.shopping;if(d.cfg){Object.assign(CFG,d.cfg);applyTheme();}S.recCats.forEach((_,i)=>folderOpen[i]=false);S.nid=Math.max(20,...S.inventory.map(x=>x.id||0))+1;S.nrid=Math.max(10,...S.recipes.map(x=>x.id||0))+1;saveData();closeSheet();renderInv();renderRec();renderShop();updateBadge();toast('インポートしました');}catch{alert('ファイルの形式が正しくありません');}};reader.readAsText(file);e.target.value='';}
+function doExport(){const data=JSON.stringify({recCats:S.recCats,recipes:S.recipes,shopping:S.shopping,cfg:CFG},null,2);const blob=new Blob([data],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;const d=new Date();a.download=`Pantryno_backup_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;a.click();URL.revokeObjectURL(url);toast('エクスポートしました');}
+function doImport(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.recCats)S.recCats=d.recCats;if(d.recipes){S.recipes=d.recipes;S.recipes.forEach(r=>{if(r.ings&&!r.ingGroups){r.ingGroups=[{label:'',ings:r.ings}];delete r.ings;}r.stepGroups=normalizeStepGroups(r.stepGroups||r.steps||[]);delete r.steps;});}if(d.shopping)S.shopping=d.shopping;if(d.cfg){Object.assign(CFG,d.cfg);applyTheme();}S.recCats.forEach((_,i)=>folderOpen[i]=false);S.nrid=Math.max(10,...S.recipes.map(x=>x.id||0))+1;saveData();closeSheet();renderRec();renderShop();updateBadge();toast('インポートしました');}catch{alert('ファイルの形式が正しくありません');}};reader.readAsText(file);e.target.value='';}
 function openHelp(){
   showSheet(`<h3><i class="bi bi-question-circle" style="margin-right:6px"></i>使い方</h3>
 
   <div style="display:flex;flex-direction:column;gap:12px">
-
-    <div style="background:var(--ac-light);border-radius:10px;padding:12px 14px">
-      <div style="font-size:13px;font-weight:700;color:var(--ac-dark);margin-bottom:8px">📦 在庫タブ</div>
-      <div style="font-size:12px;color:#555;line-height:1.8">
-        食材・食品の在庫を管理します。<br>
-        <b>追加</b>：右上の＋ボタンで食材を追加。名前・数量・カテゴリ・賞味期限を入力できます。<br>
-        <b>よく使う★</b>：食材カードの★をタップするとよく使うリストに登録。一覧の上部に表示されます。<br>
-        <b>カテゴリ</b>：フォルダアイコン横の編集ボタンでカテゴリの追加・変更・削除が可能。<br>
-        <b>買い物リストへ</b>：カードの🛒アイコンで買い物リストに追加できます。
-      </div>
-    </div>
 
     <div style="background:var(--ac-light);border-radius:10px;padding:12px 14px">
       <div style="font-size:13px;font-weight:700;color:var(--ac-dark);margin-bottom:8px">📖 レシピタブ</div>
@@ -1336,7 +1143,7 @@ function doReset(){
   S.nid=1;S.nrid=1;
   localStorage.removeItem(STORAGE_KEY);
   closeSheet();
-  renderInv();renderRec();renderShop();renderMenu();updateBadge();
+  renderRec();renderShop();updateBadge();
   toast('リセットしました');
 }
 
@@ -1484,7 +1291,7 @@ function waitItemHtml(it){
   const isOpen=waitOpen[it.id];
   if(r){
     // レシピ登録済み→折りたたみあり
-    const ingHtml=renderIngGroups(r,S.inventory);
+    const ingHtml=renderIngGroups(r);
     const stepHtml=renderStepGroups(r);
     return`<div style="background:#fff;border:.5px solid #e0e0e0;border-radius:10px;margin-bottom:6px;overflow:hidden ${it.checked?';opacity:.5':''}">
       <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--ac-light)">
