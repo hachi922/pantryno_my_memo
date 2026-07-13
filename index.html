@@ -44,7 +44,6 @@ function _loadFromFirestore(user){
     if(d.waitingMenu)S.waitingMenu=d.waitingMenu;
     if(d.mealPlans)S.mealPlans=d.mealPlans;
       if(d.cfg)Object.assign(CFG,d.cfg);
-      S.nid=Math.max(20,...S.inventory.map(x=>x.id||0))+1;
       S.nrid=Math.max(10,...S.recipes.map(x=>x.id||0))+1;
       S.recCats.forEach((_,i)=>folderOpen[i]=false);
           applyTheme();renderRec();renderShop();updateBadge();
@@ -58,8 +57,7 @@ function _loadFromFirestore(user){
     if(!window._fbUid)return;
     const ref=_db.collection('users').doc(window._fbUid).collection('data').doc('main');
     ref.set({
-      recCats:S.recCats,
-      inventory:S.inventory,recipes:S.recipes,
+      recCats:S.recCats,recipes:S.recipes,
       shopping:S.shopping,cfg:CFG
     }).catch(e=>console.warn('Firestore write error:',e));
   };
@@ -466,7 +464,6 @@ const S={
   const saved=loadData();
   if(saved){
     if(saved.recCats)S.recCats=saved.recCats;
-    if(saved.inventory)S.inventory=saved.inventory;
     if(saved.recipes){
       S.recipes=saved.recipes;
       S.recipes.forEach(r=>{if(r.ings&&!r.ingGroups){r.ingGroups=[{label:'',ings:r.ings}];delete r.ings;}});
@@ -475,7 +472,6 @@ const S={
     if(saved.waitingMenu)S.waitingMenu=saved.waitingMenu;
     if(saved.mealPlans)S.mealPlans=saved.mealPlans;
     if(saved.cfg)Object.assign(CFG,saved.cfg);
-    S.nid=Math.max(20,...S.inventory.map(x=>x.id||0))+1;
     S.nrid=Math.max(10,...S.recipes.map(x=>x.id||0))+1;
   }
   S.recCats.forEach((_,i)=>folderOpen[i]=false);
@@ -505,70 +501,8 @@ function switchTab(t){
   if(t==='shop')renderShop();
   if(t==='wait')renderWait();
 }
-function handleAdd(){S.tab==='inv'?openItemSheet():openRecSheet();}
-function openCatManage(){catManageSheet(S.tab==='inv'?'inv':'rec');}
-
-    html+=`</div>`;
-  }
-  // カテゴリフォルダ
-  let any=false;
-    if(cf!==''&&parseInt(cf)!==ci)return;
-    const items=S.inventory.filter(it=>it.ci===ci&&it.name.toLowerCase().includes(q));
-    if(!items.length)return;
-    any=true;
-    const isOpen=invFolderOpen[ci]!==false;
-    html+=`<div class="inv-folder"><div class="inv-folder-header fhc" onclick="toggleInvFolder(${ci})">
-      <i class="bi bi-${isOpen?'folder2-open':'folder2'}" style="font-size:16px;color:var(--ac-mid)"></i>
-      <span class="inv-folder-name">${cat}</span>
-      <span style="font-size:12px;color:#888">${items.length}品</span>
-      <i class="bi bi-chevron-right inv-folder-chevron ${isOpen?'open':''}"></i>
-    </div>`;
-    if(isOpen){
-      html+=`<div style="padding:6px 10px 8px"><div class="inv-grid">`;
-      items.forEach(it=>{html+=icardHtml(it);});
-      html+=`</div></div>`;
-    }
-    html+=`</div>`;
-  });
-  if(!favItems.length&&!any)html='<div class="em"><i class="bi bi-box-seam"></i>食材が見つかりません</div>';
-}
-
-
-// </div>`;
-  });
-  if(!any)html='<div class="em"><i class="bi bi-heart-pulse"></i>'+(q?`「${q}」が見つかりません`:'<br><button class="btn p" style="margin-top:12px" onclick="openRecSheet()" >レシピを追加</button></div>';
-  html+='</div>';
-  document.getElementById('dm-c').innerHTML=html;
-}
-    </div>
-    <button class="star-btn ${fav}" onclick="toggleRecFav(${r.id},event)" title="お気に入り">★</button>
-    <div class="rec-row-acts">
-      <button class="icb" onclick="openRecSheet(${r.id});event.stopPropagation()"><i class="bi bi-pencil"></i></button>
-      <button class="icb del" onclick="if(confirm('削除しますか？')){S.recipes=S.recipes.filter(x=>x.id!==${r.id});S.selectedRecs.delete(${r.id});renderRec();saveData();}event.stopPropagation()"><i class="bi bi-trash"></i></button>
-    </div>
-  </div>`;
-}
-  updateDmAddAllBtn();
-}
-    else{lbl&&(lbl.textContent='食材は揃っています');if(btn)btn.disabled=true;}
-  }
-}
-    S.waitingMenu.push({id:Date.now()+Math.random(),name:r.name,recipeId:rid,checked:false});
-    added++;
-  });
-  if(added>0){saveData();toast(`${added}品を作るリストに追加しました`);}
-  else{toast('すでにリストにあります');}
-}
-    </div>
-    <div class="sbox">
-      <button class="sbox-toggle" onclick="toggleDetailSection('ing')"><h5>材料</h5><i class="bi bi-chevron-right ${detailOpen.ing?'open':''}"></i></button>
-      <div class="sbox-body" id="detail-ing" style="display:${detailOpen.ing?'block':'none'}">${ingHtml}</div>
-    </div>
-    <div class="sbox">
-      <button class="sbox-toggle" onclick="toggleDetailSection('step')"><h5>作り方</h5><i class="bi bi-chevron-right ${detailOpen.step?'open':''}"></i></button>
-      <div class="sbox-body" id="detail-step" style="display:${detailOpen.step?'block':'none'}">${steps}</div>
-    </div>`;
-}
+function handleAdd(){openRecSheet();}
+function openCatManage(){catManageSheet('rec');}
 function toggleRecFavFolder(){folderOpen['fav']=folderOpen['fav']===false?true:false;renderRec();}
 function toggleRecFav(id,e){e.stopPropagation();const r=S.recipes.find(x=>x.id===id);if(r){r.fav=!r.fav;renderRec();saveData();}}
 function recRowHtml(r){
@@ -1136,11 +1070,10 @@ function openHelp(){
 }
 function doReset(){
   if(!confirm('すべてのデータをリセットしますか？\nこの操作は取り消せません。'))return;
-  S.inventory=[];
   S.recipes=[];
   S.shopping=[];
   S.selectedRecs=new Set();
-  S.nid=1;S.nrid=1;
+  S.nrid=1;
   localStorage.removeItem(STORAGE_KEY);
   closeSheet();
   renderRec();renderShop();updateBadge();
